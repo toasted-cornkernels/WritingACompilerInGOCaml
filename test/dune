@@ -1,0 +1,9 @@
+(env
+ (dev
+  (flags (:standard -g -short-paths -safe-string -strict-formats -strict-sequence -bin-annot -warn-error -A))))
+
+(test
+ (name WritingACompilerInGOCamlTest)
+ (flags (:standard -open Core -open WritingACompilerInGOCamlLib))
+ (libraries WritingACompilerInGOCamlLib core)
+ (preprocess (pps ppx_compare ppx_jane)))
