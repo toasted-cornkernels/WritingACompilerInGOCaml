@@ -41,9 +41,13 @@ let next_token (lexer : t) : t * Token.t =
       let peeked_lexer, peeked_char = peek_char lexer in
       if Char.equal peeked_char '=' then
         (* Operator.Equal *)
-        let char_read_lexer, read_char = read_char peeked_lexer in
-        raise TODO
-      else (* Operator.Assign *)
-        raise TODO
+        let char_read_lexer = fst @@ read_char peeked_lexer in
+        ( char_read_lexer
+        , { type_= Operator TokenType.Operator.Equal
+          ; literal= Char.to_string peeked_char ^ Char.to_string char_read_lexer.ch } )
+      else
+        (* Operator.Assign *)
+        ( peeked_lexer
+        , {type_= Operator TokenType.Operator.Assign; literal= Char.to_string peeked_lexer.ch} )
   | _ ->
       raise TODO
