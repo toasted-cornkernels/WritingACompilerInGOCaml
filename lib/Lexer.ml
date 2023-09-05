@@ -10,15 +10,11 @@ let default : t = {input= ""; position= 0; read_position= 0; ch= '\x00'}
 
 (* TODO: make .mli *)
 
-(** Consume a character of the input, shifting it to be the current char. *)
-let read_char (_lexer : t) : t = raise TODO
+(** Read a character starting from the lexer's current position. *)
+let read_char (_lexer : t) : t * Char.t = raise TODO
 
 (** Create a lexer that reads the input string from the beginning. *)
-let of_string (input : string) : t = read_char {default with input}
-
-(** Get the next token which the lexer's current character begins. e.g. Get Operator.Equal or
-    Operator.Assign depending on the peeked character. *)
-let next_token (_lexer : t) : t * Token.t = raise TODO
+let of_string (input : string) : t = fst @@ read_char {default with input}
 
 (** Skip the whitespace, and the following ones, that the lexer may currently seeing. *)
 let skip_whitespace (_lexer : t) : t = raise TODO
@@ -34,3 +30,20 @@ let read_number (_lexer : t) : t * String.t = raise TODO
 
 (** Is the character allowed in an identifier name? *)
 let is_letter (char : Char.t) = Char.is_alpha char || Char.equal char '_'
+
+(** Get the next token which the lexer's current character begins. e.g. Get Operator.Equal or
+    Operator.Assign depending on the peeked character. *)
+let next_token (lexer : t) : t * Token.t =
+  let whitespace_ignored = skip_whitespace lexer in
+  match whitespace_ignored.ch with
+  | '=' ->
+      (* Either Operator.Equal or Operator.Assign *)
+      let peeked_lexer, peeked_char = peek_char lexer in
+      if Char.equal peeked_char '=' then
+        (* Operator.Equal *)
+        let char_read_lexer, read_char = read_char peeked_lexer in
+        raise TODO
+      else (* Operator.Assign *)
+        raise TODO
+  | _ ->
+      raise TODO
