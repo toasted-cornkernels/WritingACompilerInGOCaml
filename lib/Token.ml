@@ -120,15 +120,20 @@ module Keywords = struct
     |> add "if" @@ Keyword If
     |> add "else" @@ Keyword Else
     |> add "return" @@ Keyword Return
-
-
-  let lookup_ident (ident : String.t) : TokenType.t =
-    match find_opt ident keywords with None -> IdentLiteral Ident | Some token -> token
 end
 
-module Token = struct
-  type t = {type_: TokenType.t; literal: String.t}
+type t = {type_: TokenType.t; literal: String.t}
 
-  let of_char (token_type : TokenType.t) (char : Char.t) : t =
-    {type_= token_type; literal= String.of_char char}
-end
+let of_char (token_type : TokenType.t) (char : Char.t) : t =
+  {type_= token_type; literal= String.of_char char}
+
+
+let lookup_ident (ident : String.t) : TokenType.t =
+  match Keywords.find_opt ident Keywords.keywords with
+  | None ->
+      IdentLiteral Ident
+  | Some token ->
+      token
+
+
+let is_ident (ident : String.t) : bool = Option.is_some @@ Keywords.find_opt ident Keywords.keywords
