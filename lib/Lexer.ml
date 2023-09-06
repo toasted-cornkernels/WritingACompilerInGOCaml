@@ -57,80 +57,70 @@ let read_number (lexer : t) : t * String.t =
     Operator.Assign depending on the peeked character. *)
 let next_token (lexer : t) : t * Token.t =
   let open Token in
+  let open TokenType in
   let whitespace_ignored_lexer = skip_whitespace lexer in
   match whitespace_ignored_lexer.ch with
   | '=' ->
       if Char.equal '=' @@ peek_char whitespace_ignored_lexer then
         let char_read_lexer = read_char whitespace_ignored_lexer in
         ( read_char char_read_lexer
-        , { type_= Operator TokenType.Operator.Equal
+        , { type_= Operator Operator.Equal
           ; literal= Char.to_string whitespace_ignored_lexer.ch ^ Char.to_string char_read_lexer.ch
           } )
       else
         ( read_char whitespace_ignored_lexer
-        , { type_= Operator TokenType.Operator.Assign
-          ; literal= Char.to_string whitespace_ignored_lexer.ch } )
+        , {type_= Operator Operator.Assign; literal= Char.to_string whitespace_ignored_lexer.ch} )
   | '+' ->
       ( read_char whitespace_ignored_lexer
-      , { type_= Operator TokenType.Operator.Plus
-        ; literal= Char.to_string whitespace_ignored_lexer.ch } )
+      , {type_= Operator Operator.Plus; literal= Char.to_string whitespace_ignored_lexer.ch} )
   | '-' ->
       ( read_char whitespace_ignored_lexer
-      , { type_= Operator TokenType.Operator.Minus
-        ; literal= Char.to_string whitespace_ignored_lexer.ch } )
+      , {type_= Operator Operator.Minus; literal= Char.to_string whitespace_ignored_lexer.ch} )
   | '!' ->
       if Char.equal '=' @@ peek_char whitespace_ignored_lexer then
         let char_read_lexer = read_char whitespace_ignored_lexer in
         ( read_char char_read_lexer
-        , { type_= Operator TokenType.Operator.NotEqual
+        , { type_= Operator Operator.NotEqual
           ; literal= Char.to_string whitespace_ignored_lexer.ch ^ Char.to_string char_read_lexer.ch
           } )
       else
         ( read_char whitespace_ignored_lexer
-        , { type_= Operator TokenType.Operator.Bang
-          ; literal= Char.to_string whitespace_ignored_lexer.ch } )
+        , {type_= Operator Operator.Bang; literal= Char.to_string whitespace_ignored_lexer.ch} )
   | '/' ->
       ( read_char whitespace_ignored_lexer
-      , { type_= Operator TokenType.Operator.Slash
-        ; literal= Char.to_string whitespace_ignored_lexer.ch } )
+      , {type_= Operator Operator.Slash; literal= Char.to_string whitespace_ignored_lexer.ch} )
   | '*' ->
       ( read_char whitespace_ignored_lexer
-      , { type_= Operator TokenType.Operator.Asterisk
-        ; literal= Char.to_string whitespace_ignored_lexer.ch } )
+      , {type_= Operator Operator.Asterisk; literal= Char.to_string whitespace_ignored_lexer.ch} )
   | '<' ->
       ( read_char whitespace_ignored_lexer
-      , { type_= Operator TokenType.Operator.LessThan
-        ; literal= Char.to_string whitespace_ignored_lexer.ch } )
+      , {type_= Operator Operator.LessThan; literal= Char.to_string whitespace_ignored_lexer.ch} )
   | '>' ->
       ( read_char whitespace_ignored_lexer
-      , { type_= Operator TokenType.Operator.GreaterThan
-        ; literal= Char.to_string whitespace_ignored_lexer.ch } )
+      , {type_= Operator Operator.GreaterThan; literal= Char.to_string whitespace_ignored_lexer.ch}
+      )
   | ';' ->
       ( read_char whitespace_ignored_lexer
-      , { type_= Delimiter TokenType.Delimiter.Semicolon
-        ; literal= Char.to_string whitespace_ignored_lexer.ch } )
+      , {type_= Delimiter Delimiter.Semicolon; literal= Char.to_string whitespace_ignored_lexer.ch}
+      )
   | ',' ->
       ( read_char whitespace_ignored_lexer
-      , { type_= Delimiter TokenType.Delimiter.Comma
-        ; literal= Char.to_string whitespace_ignored_lexer.ch } )
+      , {type_= Delimiter Delimiter.Comma; literal= Char.to_string whitespace_ignored_lexer.ch} )
   | '{' ->
       ( read_char whitespace_ignored_lexer
-      , { type_= Delimiter TokenType.Delimiter.LBrace
-        ; literal= Char.to_string whitespace_ignored_lexer.ch } )
+      , {type_= Delimiter Delimiter.LBrace; literal= Char.to_string whitespace_ignored_lexer.ch} )
   | '}' ->
       ( read_char whitespace_ignored_lexer
-      , { type_= Delimiter TokenType.Delimiter.RBrace
-        ; literal= Char.to_string whitespace_ignored_lexer.ch } )
+      , {type_= Delimiter Delimiter.RBrace; literal= Char.to_string whitespace_ignored_lexer.ch} )
   | '\x00' ->
-      (read_char whitespace_ignored_lexer, {type_= Meta TokenType.Meta.EOF; literal= ""})
+      (read_char whitespace_ignored_lexer, {type_= Meta Meta.EOF; literal= ""})
   | _ ->
       if is_letter whitespace_ignored_lexer.ch then
         let identifier_read_lexer, identifier_read = read_identifier whitespace_ignored_lexer in
         (identifier_read_lexer, {type_= lookup_ident identifier_read; literal= identifier_read})
       else if Char.is_digit whitespace_ignored_lexer.ch then
         let number_read_lexer, number_read = read_number whitespace_ignored_lexer in
-        (number_read_lexer, {type_= IdentLiteral TokenType.IdentLiteral.Int; literal= number_read})
+        (number_read_lexer, {type_= IdentLiteral IdentLiteral.Int; literal= number_read})
       else
         ( whitespace_ignored_lexer
-        , {type_= Meta TokenType.Meta.Illegal; literal= Char.to_string whitespace_ignored_lexer.ch}
-        )
+        , {type_= Meta Meta.Illegal; literal= Char.to_string whitespace_ignored_lexer.ch} )
