@@ -8,17 +8,29 @@ let default : t = {input= ""; position= 0; read_position= 0; ch= '\x00'}
 
 (* TODO: make .mli *)
 
-(** Read a character starting from the lexer's current position. *)
-let read_char (_lexer : t) : t = raise TODO
+(** Consume a character of the input, shifting it to be the current char. *)
+let read_char (lexer : t) : t =
+  { lexer with
+    ch=
+      ( if Int.( >= ) lexer.read_position @@ String.length lexer.input then '\x00'
+        else String.get lexer.input lexer.read_position )
+  ; position= lexer.read_position
+  ; read_position= lexer.read_position + 1 }
+
 
 (** Create a lexer that reads the input string from the beginning. *)
 let of_string (input : string) : t = read_char {default with input}
 
 (** Skip the whitespace, and the following ones, that the lexer may currently seeing. *)
-let skip_whitespace (_lexer : t) : t = raise TODO
+let rec skip_whitespace (lexer : t) : t =
+  match lexer.ch with ' ' | '\t' | '\n' | '\r' -> skip_whitespace lexer | _ -> lexer
+
 
 (** Peek a character without changing the lexer's current reading position. *)
-let peek_char (_lexer : t) : Char.t = raise TODO
+let peek_char (lexer : t) : Char.t =
+  if Int.( >= ) lexer.read_position @@ String.length lexer.input then '\x00'
+  else String.get lexer.input lexer.read_position
+
 
 (** Read an identifier starting from the lexer's current position. *)
 let read_identifier (_lexer : t) : t * String.t = raise TODO
