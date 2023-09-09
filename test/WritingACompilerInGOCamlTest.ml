@@ -98,4 +98,21 @@ module LexerTest = struct
     ; {type_= IdentLiteral IdentLiteral.Int; literal= "9"}
     ; {type_= Delimiter Delimiter.Semicolon; literal= ";"}
     ; {type_= Meta Meta.EOF; literal= ""} ]
+
+
+  let lexer = Lexer.of_string input
+
+  let _ =
+    List.foldi expected
+      ~f:(fun n current_lexer expected_token ->
+        let lexed_lexer, lexed_token = Lexer.next_token current_lexer in
+        if not @@ Token.TokenType.equal lexed_token.type_ expected_token.type_ then
+          Out_channel.printf "tests[%d] - tokentype wrong. expected=%s, got=%s" n
+            (Token.TokenType.to_string expected_token.type_)
+            (Token.TokenType.to_string lexed_token.type_) ;
+        if not @@ String.equal lexed_token.literal expected_token.literal then
+          Out_channel.printf "tests[%d] - literal wrong. expected=%s, got=%s" n
+            expected_token.literal lexed_token.literal ;
+        lexed_lexer )
+      ~init:lexer
 end

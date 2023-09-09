@@ -1,12 +1,12 @@
 module TokenType = struct
   module Meta = struct
-    type t = Illegal | EOF
+    type t = Illegal | EOF [@@deriving equal]
 
     let to_string = function Illegal -> "ILLEGAL" | EOF -> "EOF"
   end
 
   module IdentLiteral = struct
-    type t = Ident | Int
+    type t = Ident | Int [@@deriving equal]
 
     let to_string = function Ident -> "IDENT" | Int -> "INT"
   end
@@ -23,6 +23,7 @@ module TokenType = struct
       | GreaterThan
       | Equal
       | NotEqual
+    [@@deriving equal]
 
     let to_string = function
       | Assign ->
@@ -48,7 +49,7 @@ module TokenType = struct
   end
 
   module Delimiter = struct
-    type t = Comma | Semicolon | LParen | RParen | LBrace | RBrace
+    type t = Comma | Semicolon | LParen | RParen | LBrace | RBrace [@@deriving equal]
 
     let to_string = function
       | Comma ->
@@ -66,7 +67,7 @@ module TokenType = struct
   end
 
   module Keyword = struct
-    type t = Function | Let | True | False | If | Else | Return
+    type t = Function | Let | True | False | If | Else | Return [@@deriving equal]
 
     let to_string = function
       | Function ->
@@ -91,6 +92,7 @@ module TokenType = struct
     | Operator of Operator.t
     | Delimiter of Delimiter.t
     | Keyword of Keyword.t
+  [@@deriving equal]
 
   let to_string = function
     | Meta meta ->
@@ -122,7 +124,7 @@ module Keywords = struct
     |> add "return" @@ Keyword Return
 end
 
-type t = {type_: TokenType.t; literal: String.t}
+type t = {type_: TokenType.t; literal: String.t} [@@deriving equal]
 
 let of_char (token_type : TokenType.t) (char : Char.t) : t =
   {type_= token_type; literal= String.of_char char}
