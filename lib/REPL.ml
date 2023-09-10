@@ -9,7 +9,7 @@ let rec start () : unit =
     | {type_= Meta Meta.EOF; _} ->
         ()
     | token ->
-        Out_channel.print_endline @@ Token.to_string token ;
+        Out_channel.print_endline @@ F.asprintf "%a" Token.pp token ;
         print_next_token_until_EOF lexed_lexer
   in
   Out_channel.print_string prompt ;
