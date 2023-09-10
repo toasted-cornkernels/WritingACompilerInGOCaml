@@ -126,6 +126,11 @@ end
 
 type t = {type_: TokenType.t; literal: String.t} [@@deriving equal]
 
+let to_string ({type_; literal} : t) : string =
+  let module F = Format in
+  F.asprintf "{type_= %s; literal= %s}" (TokenType.to_string type_) literal
+
+
 let of_char (token_type : TokenType.t) (char : Char.t) : t =
   {type_= token_type; literal= String.of_char char}
 
