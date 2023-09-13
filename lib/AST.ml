@@ -1,21 +1,84 @@
 exception TODO
 
-type node = Statement of stmt | Expression of expr
+module type NodeSig = sig
+  type t
 
-and stmt = Let of let_stmt | Return of rtn_stmt | Expression of expr_stmt | Block of block_stmt
+  val token_literal : t -> string
 
-and expr =
-  | Identifier of ident
-  | Boolean of boolean
-  | Integer of integer
-  | Prefix of prefix
-  | Infix of infix
-  | If of if_expr
-  | Fn of fun_literal
-  | Call of call
+  val to_string : t -> string
+end
 
-let token_literal (node : node) : string = raise TODO
+module Statement : NodeSig = struct
+  module Let : NodeSig = struct
+    type t = |
 
-let to_string (node : node) : string = raise TODO
+    let token_literal (statement : t) : string = raise TODO
 
-(* After being refactored.. It all becomes into module soup. :( *)
+    let to_string (statement : t) : string = raise TODO
+  end
+
+  module Return : NodeSig = struct
+    type t = |
+
+    let token_literal (statement : t) : string = raise TODO
+
+    let to_string (statement : t) : string = raise TODO
+  end
+
+  module Expression : NodeSig = struct
+    type t = |
+
+    let token_literal (statement : t) : string = raise TODO
+
+    let to_string (statement : t) : string = raise TODO
+  end
+
+  module Block : NodeSig = struct
+    type t = |
+
+    let token_literal (statement : t) : string = raise TODO
+
+    let to_string (statement : t) : string = raise TODO
+  end
+
+  type t = Let of Let.t | Return of Return.t | Expression of Expression.t | Block of Block.t
+
+  let token_literal (statement : t) : string = raise TODO
+
+  let to_string (statement : t) : string = raise TODO
+end
+
+(* and expr = *)
+(*   | Identifier of ident *)
+(*   | Boolean of boolean *)
+(*   | Integer of integer *)
+(*   | Prefix of prefix *)
+(*   | Infix of infix *)
+(*   | If of if_expr *)
+(*   | Fn of fun_literal *)
+(*   | Call of call *)
+
+module Expression : NodeSig = struct
+  (* TODO *)
+  type t = |
+
+  let token_literal (expression : t) : string = raise TODO
+
+  let to_string (expression : t) : string = raise TODO
+end
+
+module Program : NodeSig = struct
+  type t = Statement.t List.t
+
+  let token_literal (program : t) : string = raise TODO
+
+  let to_string (program : t) : string = raise TODO
+end
+
+module Node : NodeSig = struct
+  type t = Statement of Statement.t | Expression of Expression.t | Program of Program.t
+
+  let token_literal (node : t) : string = raise TODO
+
+  let to_string (node : t) : string = raise TODO
+end
