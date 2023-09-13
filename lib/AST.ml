@@ -8,10 +8,13 @@ module type NodeSig = sig
   val to_string : t -> string
 end
 
-module Statement : NodeSig = struct
+module rec Statement : NodeSig = struct
   module Let : NodeSig = struct
-    (* TODO *)
-    type t = |
+    type t =
+      { token: Token.t (* must be token.LET *)
+      ; name: Expression.t
+            (* TODO: How can I turn this into Expression.Identifier.t? Should I use a functor? *)
+      ; value: String.t }
 
     let token_literal (statement : t) : string = raise TODO
 
@@ -52,7 +55,7 @@ module Statement : NodeSig = struct
   let to_string (statement : t) : string = raise TODO
 end
 
-module Expression : NodeSig = struct
+and Expression : NodeSig = struct
   module Identifier : NodeSig = struct
     (* TODO *)
     type t = |
