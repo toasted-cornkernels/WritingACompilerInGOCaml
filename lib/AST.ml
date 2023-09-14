@@ -8,7 +8,7 @@ module type NodeSig = sig
   val to_string : t -> string
 end
 
-module Statement (SubType : NodeSig) = struct
+module Expression (SubType : NodeSig) = struct
   type t = SubType.t
 
   let token_literal : t -> string = SubType.token_literal
@@ -16,7 +16,7 @@ module Statement (SubType : NodeSig) = struct
   let to_string : t -> string = SubType.to_string
 end
 
-module Expression (SubType : NodeSig) = struct
+module Statement (SubType : NodeSig) = struct
   type t = SubType.t
 
   let token_literal : t -> string = SubType.token_literal
