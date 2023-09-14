@@ -1,5 +1,3 @@
-exception TODO
-
 module F = Format
 
 module type NodeSig = sig
