@@ -8,7 +8,7 @@ module type NodeSig = sig
   val to_string : t -> string
 end
 
-module Expression (SubType : NodeSig) = struct
+module MakeExpression (SubType : NodeSig) = struct
   type t = SubType.t
 
   let token_literal : t -> string = SubType.token_literal
@@ -16,7 +16,7 @@ module Expression (SubType : NodeSig) = struct
   let to_string : t -> string = SubType.to_string
 end
 
-module Statement (SubType : NodeSig) = struct
+module MakeStatement (SubType : NodeSig) = struct
   type t = SubType.t
 
   let token_literal : t -> string = SubType.token_literal
@@ -24,78 +24,7 @@ module Statement (SubType : NodeSig) = struct
   let to_string : t -> string = SubType.to_string
 end
 
-module Expression = struct
-  module Identifier = Expression (struct
-    type t = {token: Token.t; value: String.t}
-
-    let token_literal (expression : t) : string = raise TODO
-
-    let to_string (expression : t) : string = raise TODO
-  end)
-
-  module Boolean = Expression (struct
-    (* TODO: Complete this *)
-    type t = |
-
-    let token_literal (expression : t) : string = raise TODO
-
-    let to_string (expression : t) : string = raise TODO
-  end)
-
-  module Integer = Expression (struct
-    (* TODO: Complete this *)
-    type t = |
-
-    let token_literal (expression : t) : string = raise TODO
-
-    let to_string (expression : t) : string = raise TODO
-  end)
-
-  module Prefix = Expression (struct
-    (* TODO: Complete this *)
-    type t = |
-
-    let token_literal (expression : t) : string = raise TODO
-
-    let to_string (expression : t) : string = raise TODO
-  end)
-
-  module Infix = Expression (struct
-    (* TODO: Complete this *)
-    type t = |
-
-    let token_literal (expression : t) : string = raise TODO
-
-    let to_string (expression : t) : string = raise TODO
-  end)
-
-  module If = Expression (struct
-    (* TODO: Complete this *)
-    type t = |
-
-    let token_literal (expression : t) : string = raise TODO
-
-    let to_string (expression : t) : string = raise TODO
-  end)
-
-  module Fn = Expression (struct
-    (* TODO: Complete this *)
-    type t = |
-
-    let token_literal (expression : t) : string = raise TODO
-
-    let to_string (expression : t) : string = raise TODO
-  end)
-
-  module Call = Expression (struct
-    (* TODO: Complete this *)
-    type t = |
-
-    let token_literal (expression : t) : string = raise TODO
-
-    let to_string (expression : t) : string = raise TODO
-  end)
-
+module rec Expression : NodeSig = struct
   type t =
     | Identifier of Identifier.t
     | Boolean of Boolean.t
@@ -111,45 +40,109 @@ module Expression = struct
   let to_string (expression : t) : string = raise TODO
 end
 
-type ident = Expression.Identifier.t
+and Identifier : NodeSig = MakeExpression (struct
+  type t = {token: Token.t; value: String.t}
 
-module Statement = struct
-  module Let = Statement (struct
-    type t = {token: Token.t; name: Expression.Identifier.t; value: String.t}
+  let token_literal (expression : t) : string = raise TODO
 
-    let token_literal (statement : t) : string = raise TODO
+  let to_string (expression : t) : string = raise TODO
+end)
 
-    let to_string (statement : t) : string = raise TODO
-  end)
+and Boolean : NodeSig = MakeExpression (struct
+  type t = {token: Token.t; value: Bool.t}
 
-  module Return = Statement (struct
-    (* TODO: Complete this *)
-    type t = |
+  let token_literal (expression : t) : string = raise TODO
 
-    let token_literal (statement : t) : string = raise TODO
+  let to_string (expression : t) : string = raise TODO
+end)
 
-    let to_string (statement : t) : string = raise TODO
-  end)
+and Integer : NodeSig = MakeExpression (struct
+  type t = {token: Token.t; value: Int.t}
 
-  module Expression = Statement (struct
-    (* TODO: Complete this *)
-    type t = |
+  let token_literal (expression : t) : string = raise TODO
 
-    let token_literal (statement : t) : string = raise TODO
+  let to_string (expression : t) : string = raise TODO
+end)
 
-    let to_string (statement : t) : string = raise TODO
-  end)
+and Prefix : NodeSig = MakeExpression (struct
+  type t = {token: Token.t; operator: String.t; right: Expression.t}
 
-  module Block = Statement (struct
-    (* TODO: Complete this *)
-    type t = |
+  let token_literal (expression : t) : string = raise TODO
 
-    let token_literal (statement : t) : string = raise TODO
+  let to_string (expression : t) : string = raise TODO
+end)
 
-    let to_string (statement : t) : string = raise TODO
-  end)
+and Infix : NodeSig = MakeExpression (struct
+  type t = {token: Token.t; left: Expression.t; operator: String.t; right: Expression.t}
 
-  type t = Let of Let.t | Return of Return.t | Expression of Expression.t | Block of Block.t
+  let token_literal (expression : t) : string = raise TODO
+
+  let to_string (expression : t) : string = raise TODO
+end)
+
+and If : NodeSig = MakeExpression (struct
+  type t =
+    {token: Token.t; condition: Expression.t; then_: BlockStatement.t; else_: BlockStatement.t}
+
+  let token_literal (expression : t) : string = raise TODO
+
+  let to_string (expression : t) : string = raise TODO
+end)
+
+and Fn : NodeSig = MakeExpression (struct
+  type t = {token: Token.t; parameters: Identifier.t list; body: BlockStatement.t}
+
+  let token_literal (expression : t) : string = raise TODO
+
+  let to_string (expression : t) : string = raise TODO
+end)
+
+and Call : NodeSig = MakeExpression (struct
+  type t = {token: Token.t; function_: Expression.t; arguments: Expression.t list}
+
+  let token_literal (expression : t) : string = raise TODO
+
+  let to_string (expression : t) : string = raise TODO
+end)
+
+and LetStatement : NodeSig = MakeStatement (struct
+  type t = {token: Token.t; name: Identifier.t; value: String.t}
+
+  let token_literal (statement : t) : string = raise TODO
+
+  let to_string (statement : t) : string = raise TODO
+end)
+
+and ReturnStatement : NodeSig = MakeStatement (struct
+  type t = {token: Token.t; return_value: Expression.t}
+
+  let token_literal (statement : t) : string = raise TODO
+
+  let to_string (statement : t) : string = raise TODO
+end)
+
+and ExpressionStatement : NodeSig = MakeStatement (struct
+  type t = {token: Token.t; expression: Expression.t}
+
+  let token_literal (statement : t) : string = raise TODO
+
+  let to_string (statement : t) : string = raise TODO
+end)
+
+and BlockStatement : NodeSig = MakeStatement (struct
+  type t = {token: Token.t; statements: Statement.t list}
+
+  let token_literal (statement : t) : string = raise TODO
+
+  let to_string (statement : t) : string = raise TODO
+end)
+
+and Statement : NodeSig = struct
+  type t =
+    | Let of LetStatement.t
+    | Return of ReturnStatement.t
+    | Expression of ExpressionStatement.t
+    | Block of BlockStatement.t
 
   let token_literal (statement : t) : string = raise TODO
 
@@ -165,7 +158,7 @@ module Program : NodeSig = struct
 end
 
 module Node : NodeSig = struct
-  type t = Statement of Statement.t | Expression of Expression.t | Program of Program.t
+  type t = MakeStatement of Statement.t | Expression of Expression.t | Program of Program.t
 
   let token_literal (node : t) : string = raise TODO
 
