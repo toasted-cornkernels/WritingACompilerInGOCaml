@@ -1,6 +1,4 @@
-exception TODO
-
-module type NodeSig = sig
+module Expression : sig
   type t
 
   val token_literal : t -> string
@@ -8,10 +6,18 @@ module type NodeSig = sig
   val to_string : t -> string
 end
 
-module Expression : NodeSig
+module Statement : sig
+  type t
 
-module Statement : NodeSig
+  val token_literal : t -> string
 
-module Program : NodeSig
+  val to_string : t -> string
+end
 
-module Node : NodeSig
+module Program : sig
+  type t
+
+  val token_literal : t -> string
+
+  val to_string : t -> string
+end

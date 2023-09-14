@@ -1,5 +1,7 @@
 exception TODO
 
+module F = Format
+
 module type NodeSig = sig
   type t
 
@@ -108,15 +110,16 @@ end)
 and LetStatement : NodeSig = MakeStatement (struct
   type t = {token: Token.t; name: Identifier.t; value: String.t}
 
-  let token_literal (statement : t) : string = raise TODO
+  let token_literal ({token; _} : t) : string = token.literal
 
-  let to_string (statement : t) : string = raise TODO
+  let to_string ({token; name; value} : t) : string =
+    F.asprintf "%s %s = %s;" token.literal (Identifier.to_string name) value
 end)
 
 and ReturnStatement : NodeSig = MakeStatement (struct
   type t = {token: Token.t; return_value: Expression.t}
 
-  let token_literal (statement : t) : string = raise TODO
+  let token_literal ({token; _} : t) : string = token.literal
 
   let to_string (statement : t) : string = raise TODO
 end)
@@ -155,12 +158,4 @@ module Program : NodeSig = struct
   let token_literal (program : t) : string = raise TODO
 
   let to_string (program : t) : string = raise TODO
-end
-
-module Node : NodeSig = struct
-  type t = MakeStatement of Statement.t | Expression of Expression.t | Program of Program.t
-
-  let token_literal (node : t) : string = raise TODO
-
-  let to_string (node : t) : string = raise TODO
 end
