@@ -106,7 +106,8 @@ and Prefix : NodeSig = MakeExpression (struct
 
   let token_literal ({token; _} : t) : string = token.literal
 
-  let to_string (expression : t) : string = raise TODO
+  let to_string ({operator; right; _} : t) : string =
+    F.asprintf "(%s%s)" operator @@ Expression.to_string right
 end)
 
 and Infix : NodeSig = MakeExpression (struct
@@ -114,16 +115,26 @@ and Infix : NodeSig = MakeExpression (struct
 
   let token_literal ({token; _} : t) : string = token.literal
 
-  let to_string (expression : t) : string = raise TODO
+  let to_string ({left; operator; right; _} : t) : string =
+    F.asprintf "(%s %s %s)" (Expression.to_string left) operator (Expression.to_string right)
 end)
 
 and If : NodeSig = MakeExpression (struct
   type t =
-    {token: Token.t; condition: Expression.t; then_: BlockStatement.t; else_: BlockStatement.t}
+    { token: Token.t
+    ; condition: Expression.t
+    ; then_: BlockStatement.t
+    ; else_: BlockStatement.t option }
 
   let token_literal ({token; _} : t) : string = token.literal
 
-  let to_string (expression : t) : string = raise TODO
+  let to_string ({condition; then_; else_; _} : t) : string =
+    F.asprintf "if %s %s%s" (Expression.to_string condition) (BlockStatement.to_string then_)
+      ( match else_ with
+      | Some block ->
+          F.asprintf " else %s" @@ BlockStatement.to_string block
+      | None ->
+          "" )
 end)
 
 and Fn : NodeSig = MakeExpression (struct
@@ -131,7 +142,11 @@ and Fn : NodeSig = MakeExpression (struct
 
   let token_literal ({token; _} : t) : string = token.literal
 
-  let to_string (expression : t) : string = raise TODO
+  let to_string ({token; parameters; body} : t) : string =
+    let ( >>| ) = List.( >>| ) in
+    let parameter_list_string = parameters >>| Identifier.to_string |> String.concat ~sep:", " in
+    F.asprintf "%s(%s) %s" (Token.to_string token) parameter_list_string
+    @@ BlockStatement.to_string body
 end)
 
 and Call : NodeSig = MakeExpression (struct
@@ -139,33 +154,39 @@ and Call : NodeSig = MakeExpression (struct
 
   let token_literal ({token; _} : t) : string = token.literal
 
-  let to_string (expression : t) : string = raise TODO
+  let to_string ({function_; arguments; _} : t) : string =
+    let ( >>| ) = List.( >>| ) in
+    let arguments_string = arguments >>| Expression.to_string |> String.concat ~sep:", " in
+    F.asprintf "%s(%s)" (Expression.to_string function_) arguments_string
 end)
 
 and LetStatement : NodeSig = MakeStatement (struct
-  type t = {token: Token.t; name: Identifier.t; value: String.t}
+  type t = {token: Token.t; name: Identifier.t; value: String.t option}
 
   let token_literal ({token; _} : t) : string = token.literal
 
   let to_string ({token; name; value} : t) : string =
-    F.asprintf "%s %s = %s;" token.literal (Identifier.to_string name) value
+    F.asprintf "%s %s %s;" token.literal (Identifier.to_string name)
+      (match value with Some v -> F.asprintf "= %s" v | None -> "")
 end)
 
 and ReturnStatement : NodeSig = MakeStatement (struct
-  type t = {token: Token.t; value: Expression.t}
+  type t = {token: Token.t; value: Expression.t option}
 
   let token_literal ({token; _} : t) : string = token.literal
 
   let to_string ({token; value} : t) : string =
-    F.asprintf "%s %s;" token.literal @@ Expression.to_string value
+    F.asprintf "%s%s;" token.literal
+      (match value with Some v -> F.asprintf " %s" @@ Expression.to_string v | None -> "")
 end)
 
 and ExpressionStatement : NodeSig = MakeStatement (struct
-  type t = {token: Token.t; expression: Expression.t}
+  type t = {token: Token.t; expression: Expression.t option}
 
   let token_literal ({token; _} : t) : string = token.literal
 
-  let to_string ({expression; _} : t) : string = Expression.to_string expression
+  let to_string ({expression; _} : t) : string =
+    match expression with Some e -> Expression.to_string e | None -> ""
 end)
 
 and BlockStatement : NodeSig = MakeStatement (struct
