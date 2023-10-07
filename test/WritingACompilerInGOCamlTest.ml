@@ -1,6 +1,8 @@
-module LexerTest = struct
-  open Token.TokenType
+exception TODO
 
+open Token.TokenType
+
+module LexerTest = struct
   let input =
     {|let five = 5;
      let ten = 10;
@@ -115,4 +117,24 @@ module LexerTest = struct
             expected_token.literal lexed_token.literal ;
         lexed_lexer )
       ~init:lexer
+end
+
+module ASTTest = struct
+  open Token.TokenType
+  open AST
+
+  let let_token : Token.t = {type_= Keyword Keyword.Let; literal= "let"}
+
+  let myVar : Identifier.t =
+    {token= {type_= IdentLiteral IdentLiteral.Ident; literal= "myVar"}; value= "myVar"}
+
+
+  let anotherVar : Expression.t =
+    Identifier
+      {token= {type_= IdentLiteral IdentLiteral.Ident; literal= "anotherVar"}; value= "anotherVar"}
+
+
+  let statement : Statement.t = Let {token= let_token; name= myVar; value= Some anotherVar}
+
+  let program : Program.t = [statement]
 end
