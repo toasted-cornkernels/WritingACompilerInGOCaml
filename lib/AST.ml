@@ -24,16 +24,53 @@ module MakeStatement (SubType : NodeSig) = struct
   let to_string : t -> string = SubType.to_string
 end
 
-module rec Expression : NodeSig = struct
-  type t =
-    | Identifier of Identifier.t
-    | Boolean of Boolean.t
-    | Integer of Integer.t
-    | Prefix of Prefix.t
-    | Infix of Infix.t
-    | If of If.t
-    | Fn of Fn.t
-    | Call of Call.t
+type program = statement list
+
+and let_statement = {token: Token.t; name: identifier; value: expression option}
+
+and return_statement = {token: Token.t; value: expression option}
+
+and block_statement = {token: Token.t; statements: statement list}
+
+and expression_statement = {token: Token.t; expression: expression option}
+
+and node = Statement of statement | Expression of expression
+
+and statement =
+  | Let of let_statement
+  | Return of return_statement
+  | Expression of expression_statement
+  | Block of block_statement
+
+and expression =
+  | Identifier of identifier
+  | Boolean of boolean
+  | Integer of integer
+  | Prefix of prefix_expression
+  | Infix of infix_expression
+  | If of if_expression
+  | Fn of function_literal
+  | Call of call_expression
+
+and identifier = {token: Token.t; value: String.t}
+
+and boolean = {token: Token.t; value: Bool.t}
+
+and integer = {token: Token.t; value: Int.t}
+
+and prefix_expression = {token: Token.t; operator: String.t; right: expression}
+
+and infix_expression = {token: Token.t; left: expression; operator: String.t; right: expression}
+
+and if_expression =
+  {token: Token.t; condition: expression; then_: block_statement; else_: block_statement option}
+
+and function_literal = {token: Token.t; parameters: identifier list; body: block_statement}
+
+and call_expression = {token: Token.t; function_: expression; arguments: expression list}
+
+module rec Expression : (NodeSig with type t = expression) = struct
+  type t = expression
 
   let token_literal (expression : t) : string =
     match expression with
@@ -75,32 +112,32 @@ module rec Expression : NodeSig = struct
         Call.to_string call_expr
 end
 
-and Identifier : NodeSig = MakeExpression (struct
-  type t = {token: Token.t; value: String.t}
+and Identifier : (NodeSig with type t = identifier) = MakeExpression (struct
+  type t = identifier
 
   let token_literal ({token; _} : t) : string = token.literal
 
   let to_string ({value; _} : t) : string = value
 end)
 
-and Boolean : NodeSig = MakeExpression (struct
-  type t = {token: Token.t; value: Bool.t}
+and Boolean : (NodeSig with type t = boolean) = MakeExpression (struct
+  type t = boolean
 
   let token_literal ({token; _} : t) : string = token.literal
 
   let to_string : t -> string = token_literal
 end)
 
-and Integer : NodeSig = MakeExpression (struct
-  type t = {token: Token.t; value: Int.t}
+and Integer : (NodeSig with type t = integer) = MakeExpression (struct
+  type t = integer
 
   let token_literal ({token; _} : t) : string = token.literal
 
   let to_string : t -> string = token_literal
 end)
 
-and Prefix : NodeSig = MakeExpression (struct
-  type t = {token: Token.t; operator: String.t; right: Expression.t}
+and Prefix : (NodeSig with type t = prefix_expression) = MakeExpression (struct
+  type t = prefix_expression
 
   let token_literal ({token; _} : t) : string = token.literal
 
@@ -108,8 +145,8 @@ and Prefix : NodeSig = MakeExpression (struct
     F.asprintf "(%s%s)" operator @@ Expression.to_string right
 end)
 
-and Infix : NodeSig = MakeExpression (struct
-  type t = {token: Token.t; left: Expression.t; operator: String.t; right: Expression.t}
+and Infix : (NodeSig with type t = infix_expression) = MakeExpression (struct
+  type t = infix_expression
 
   let token_literal ({token; _} : t) : string = token.literal
 
@@ -117,12 +154,8 @@ and Infix : NodeSig = MakeExpression (struct
     F.asprintf "(%s %s %s)" (Expression.to_string left) operator (Expression.to_string right)
 end)
 
-and If : NodeSig = MakeExpression (struct
-  type t =
-    { token: Token.t
-    ; condition: Expression.t
-    ; then_: BlockStatement.t
-    ; else_: BlockStatement.t option }
+and If : (NodeSig with type t = if_expression) = MakeExpression (struct
+  type t = if_expression
 
   let token_literal ({token; _} : t) : string = token.literal
 
@@ -135,8 +168,8 @@ and If : NodeSig = MakeExpression (struct
           "" )
 end)
 
-and Fn : NodeSig = MakeExpression (struct
-  type t = {token: Token.t; parameters: Identifier.t list; body: BlockStatement.t}
+and Fn : (NodeSig with type t = function_literal) = MakeExpression (struct
+  type t = function_literal
 
   let token_literal ({token; _} : t) : string = token.literal
 
@@ -147,8 +180,8 @@ and Fn : NodeSig = MakeExpression (struct
     @@ BlockStatement.to_string body
 end)
 
-and Call : NodeSig = MakeExpression (struct
-  type t = {token: Token.t; function_: Expression.t; arguments: Expression.t list}
+and Call : (NodeSig with type t = call_expression) = MakeExpression (struct
+  type t = call_expression
 
   let token_literal ({token; _} : t) : string = token.literal
 
@@ -158,18 +191,18 @@ and Call : NodeSig = MakeExpression (struct
     F.asprintf "%s(%s)" (Expression.to_string function_) arguments_string
 end)
 
-and LetStatement : NodeSig = MakeStatement (struct
-  type t = {token: Token.t; name: Identifier.t; value: String.t option}
+and LetStatement : (NodeSig with type t = let_statement) = MakeStatement (struct
+  type t = let_statement
 
   let token_literal ({token; _} : t) : string = token.literal
 
   let to_string ({token; name; value} : t) : string =
     F.asprintf "%s %s %s;" token.literal (Identifier.to_string name)
-      (match value with Some v -> F.asprintf "= %s" v | None -> "")
+      (match value with Some v -> F.asprintf "= %s" @@ Expression.to_string v | None -> "")
 end)
 
-and ReturnStatement : NodeSig = MakeStatement (struct
-  type t = {token: Token.t; value: Expression.t option}
+and ReturnStatement : (NodeSig with type t = return_statement) = MakeStatement (struct
+  type t = return_statement
 
   let token_literal ({token; _} : t) : string = token.literal
 
@@ -178,8 +211,8 @@ and ReturnStatement : NodeSig = MakeStatement (struct
       (match value with Some v -> F.asprintf " %s" @@ Expression.to_string v | None -> "")
 end)
 
-and ExpressionStatement : NodeSig = MakeStatement (struct
-  type t = {token: Token.t; expression: Expression.t option}
+and ExpressionStatement : (NodeSig with type t = expression_statement) = MakeStatement (struct
+  type t = expression_statement
 
   let token_literal ({token; _} : t) : string = token.literal
 
@@ -187,8 +220,8 @@ and ExpressionStatement : NodeSig = MakeStatement (struct
     match expression with Some e -> Expression.to_string e | None -> ""
 end)
 
-and BlockStatement : NodeSig = MakeStatement (struct
-  type t = {token: Token.t; statements: Statement.t list}
+and BlockStatement : (NodeSig with type t = block_statement) = MakeStatement (struct
+  type t = block_statement
 
   let token_literal ({token; _} : t) : string = token.literal
 
@@ -196,12 +229,8 @@ and BlockStatement : NodeSig = MakeStatement (struct
     String.concat ~sep:"\n" @@ List.map ~f:Statement.to_string statements
 end)
 
-and Statement : NodeSig = struct
-  type t =
-    | Let of LetStatement.t
-    | Return of ReturnStatement.t
-    | Expression of ExpressionStatement.t
-    | Block of BlockStatement.t
+and Statement : (NodeSig with type t = statement) = struct
+  type t = statement
 
   let token_literal (statement : t) : string =
     match statement with
@@ -227,8 +256,8 @@ and Statement : NodeSig = struct
         BlockStatement.to_string block_stmt
 end
 
-module Program : NodeSig = struct
-  type t = Statement.t List.t
+module Program : NodeSig with type t = program = struct
+  type t = program
 
   let token_literal (program : t) : string =
     match program with [] -> "" | statement :: _ -> Statement.token_literal statement
