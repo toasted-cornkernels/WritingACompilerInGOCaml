@@ -1,30 +1,14 @@
 module F = Format
 
-module type NodeSig = sig
-  type t
+type node = Statement of statement | Expression of expression
 
-  val token_literal : t -> string
+and program = statement list
 
-  val to_string : t -> string
-end
-
-module MakeExpression (SubType : NodeSig) = struct
-  type t = SubType.t
-
-  let token_literal : t -> string = SubType.token_literal
-
-  let to_string : t -> string = SubType.to_string
-end
-
-module MakeStatement (SubType : NodeSig) = struct
-  type t = SubType.t
-
-  let token_literal : t -> string = SubType.token_literal
-
-  let to_string : t -> string = SubType.to_string
-end
-
-type program = statement list
+and statement =
+  | Let of let_statement
+  | Return of return_statement
+  | Expression of expression_statement
+  | Block of block_statement
 
 and let_statement = {token: Token.t; name: identifier; value: expression option}
 
@@ -33,14 +17,6 @@ and return_statement = {token: Token.t; value: expression option}
 and block_statement = {token: Token.t; statements: statement list}
 
 and expression_statement = {token: Token.t; expression: expression option}
-
-and node = Statement of statement | Expression of expression
-
-and statement =
-  | Let of let_statement
-  | Return of return_statement
-  | Expression of expression_statement
-  | Block of block_statement
 
 and expression =
   | Identifier of identifier
@@ -68,6 +44,30 @@ and if_expression =
 and function_literal = {token: Token.t; parameters: identifier list; body: block_statement}
 
 and call_expression = {token: Token.t; function_: expression; arguments: expression list}
+
+module type NodeSig = sig
+  type t
+
+  val token_literal : t -> string
+
+  val to_string : t -> string
+end
+
+module MakeExpression (SubType : NodeSig) = struct
+  type t = SubType.t
+
+  let token_literal : t -> string = SubType.token_literal
+
+  let to_string : t -> string = SubType.to_string
+end
+
+module MakeStatement (SubType : NodeSig) = struct
+  type t = SubType.t
+
+  let token_literal : t -> string = SubType.token_literal
+
+  let to_string : t -> string = SubType.to_string
+end
 
 module rec Expression : (NodeSig with type t = expression) = struct
   type t = expression
