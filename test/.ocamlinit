@@ -12,3 +12,4 @@ in Sys.chdir root;;
 #require "core";;
 
 open Core;;
+open WritingACompilerInGOCamlLib;;
