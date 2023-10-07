@@ -120,8 +120,9 @@ module LexerTest = struct
 end
 
 module ASTTest = struct
-  open Token.TokenType
   open AST
+
+  let example = "let myVar = anotherVar;"
 
   let let_token : Token.t = {type_= Keyword Keyword.Let; literal= "let"}
 
@@ -137,4 +138,8 @@ module ASTTest = struct
   let statement : Statement.t = Let {token= let_token; name= myVar; value= Some anotherVar}
 
   let program : Program.t = [statement]
+
+  let _ = assert (String.equal example @@ Program.to_string program)
+
+  let _ = "end"
 end
