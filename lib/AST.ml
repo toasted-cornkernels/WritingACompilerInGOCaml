@@ -45,14 +45,17 @@ and function_literal = {token: Token.t; parameters: identifier list; body: block
 
 and call_expression = {token: Token.t; function_: expression; arguments: expression list}
 
+(** The interface for an AST node. *)
 module type NodeSig = sig
   type t
 
   val token_literal : t -> string
+  (** Return the literal representation of the given node. *)
 
   val to_string : t -> string
 end
 
+(** The interface for an expression node, implementing the `Node` signature. *)
 module MakeExpression (SubType : NodeSig) = struct
   type t = SubType.t
 
@@ -61,6 +64,7 @@ module MakeExpression (SubType : NodeSig) = struct
   let to_string : t -> string = SubType.to_string
 end
 
+(** The interface for a statement, implementing the `Node` signature. *)
 module MakeStatement (SubType : NodeSig) = struct
   type t = SubType.t
 
@@ -256,6 +260,7 @@ and Statement : (NodeSig with type t = statement) = struct
         BlockStatement.to_string block_stmt
 end
 
+(** The root node of an AST, whose children are statements. *)
 module Program : NodeSig with type t = program = struct
   type t = program
 

@@ -24,16 +24,12 @@ let precedence_table : (TokenType.t, precedence) Stdlib.Hashtbl.t =
   tbl
 
 
+(** The parser type that contains:
+    - A lexer for reading in tokens,
+    - A list of errors for TODO,
+    - The current token the parser is looking at, and
+    - the next token to be consumed. *)
 type t = {lexer: Lexer.t; errors: String.t List.t; current_token: Token.t; peek_token: Token.t}
-
-let default : t =
-  let open Token.TokenType in
-  let eof = Meta.EOF in
-  { lexer= Lexer.of_string ""
-  ; errors= []
-  ; current_token= {type_= Meta eof; literal= Meta.to_string eof}
-  ; peek_token= {type_= Meta eof; literal= Meta.to_string eof} }
-
 
 exception TODO
 
@@ -59,24 +55,7 @@ let parse_if : prefix_parser = raise TODO
 
 let parse_function : prefix_parser = raise TODO
 
-let parse_plus : infix_parser = raise TODO
-
-let parse_infix_minus : infix_parser = raise TODO
-
-let parse_slash : infix_parser = raise TODO
-
-let parse_asterisk : infix_parser = raise TODO
-
-let parse_equal : infix_parser = raise TODO
-
-let parse_not_equal : infix_parser = raise TODO
-
-let parse_less_than : infix_parser = raise TODO
-
-let parse_greater_than : infix_parser = raise TODO
-
-let parse_infix_lparen : infix_parser = raise TODO
-
+(** Determine which prefix parser to use when trampolining. *)
 let dispatch_prefix_parser (token_type : TokenType.t) : prefix_parser =
   let open TokenType in
   match token_type with
@@ -102,6 +81,25 @@ let dispatch_prefix_parser (token_type : TokenType.t) : prefix_parser =
       raise TODO
 
 
+let parse_plus : infix_parser = raise TODO
+
+let parse_infix_minus : infix_parser = raise TODO
+
+let parse_slash : infix_parser = raise TODO
+
+let parse_asterisk : infix_parser = raise TODO
+
+let parse_equal : infix_parser = raise TODO
+
+let parse_not_equal : infix_parser = raise TODO
+
+let parse_less_than : infix_parser = raise TODO
+
+let parse_greater_than : infix_parser = raise TODO
+
+let parse_infix_lparen : infix_parser = raise TODO
+
+(** Determine which infix parser to use when trampolining. *)
 let dispatch_infix_parser (token_type : TokenType.t) : infix_parser =
   let open TokenType in
   match token_type with
@@ -127,4 +125,35 @@ let dispatch_infix_parser (token_type : TokenType.t) : infix_parser =
       raise TODO
 
 
-let dispatch_infix_parse_function = raise TODO
+(** Advance the given parser by one token. *)
+let next_token (parser : t) : t =
+  let read_lexer, lexed_token = Lexer.next_token parser.lexer in
+  {parser with current_token= parser.peek_token; peek_token= lexed_token; lexer= read_lexer}
+
+
+(** An uninitialized parser. *)
+let default : t =
+  let open Token.TokenType in
+  let eof = Meta.EOF in
+  { lexer= Lexer.of_string ""
+  ; errors= []
+  ; current_token= {type_= Meta eof; literal= Meta.to_string eof}
+  ; peek_token= {type_= Meta eof; literal= Meta.to_string eof} }
+
+
+(* TODO: Don't expose the uninitialized parser to the interface. *)
+
+(** Initialize a parser with a given lexer. *)
+let of_lexer (lexer : Lexer.t) : t = {default with lexer} |> next_token |> next_token
+
+(** Check if the current token this parser is looking at equals to a given token type. *)
+let current_token_is (parser : t) (token_type : TokenType.t) : bool =
+  TokenType.equal parser.current_token.type_ token_type
+
+
+(** Check if the next token this parser is going to consume equals to a given token type. *)
+let peek_token_is (parser : t) (token_type : TokenType.t) : bool =
+  TokenType.equal parser.peek_token.type_ token_type
+
+
+let expect_peek (parser : t) (token_type : TokenType.t) : t * bool = raise TODO
