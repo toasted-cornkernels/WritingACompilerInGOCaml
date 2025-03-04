@@ -24,7 +24,6 @@ module LexerTest = struct
      10 == 10;
      10 != 9;|}
 
-
   let expected : Token.t list =
     [ {type_= Keyword Keyword.Let; literal= "let"}
     ; {type_= IdentLiteral IdentLiteral.Ident; literal= "five"}

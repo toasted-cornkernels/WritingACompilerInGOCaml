@@ -37,23 +37,23 @@ type prefix_parser = t -> AST.Expression.t
 
 type infix_parser = t -> AST.Expression.t -> AST.Expression.t
 
-let parse_identifier : prefix_parser = raise TODO
+let parse_identifier : prefix_parser = fun _ -> raise TODO
 
-let parse_integer : prefix_parser = raise TODO
+let parse_integer : prefix_parser = fun _ -> raise TODO
 
-let parse_bang : prefix_parser = raise TODO
+let parse_bang : prefix_parser = fun _ -> raise TODO
 
-let parse_minus : prefix_parser = raise TODO
+let parse_minus : prefix_parser = fun _ -> raise TODO
 
-let parse_true : prefix_parser = raise TODO
+let parse_true : prefix_parser = fun _ -> raise TODO
 
-let parse_false : prefix_parser = raise TODO
+let parse_false : prefix_parser = fun _ -> raise TODO
 
-let parse_lparen : prefix_parser = raise TODO
+let parse_lparen : prefix_parser = fun _ -> raise TODO
 
-let parse_if : prefix_parser = raise TODO
+let parse_if : prefix_parser = fun _ -> raise TODO
 
-let parse_function : prefix_parser = raise TODO
+let parse_function : prefix_parser = fun _ -> raise TODO
 
 (** Determine which prefix parser to use when trampolining. *)
 let dispatch_prefix_parser (token_type : TokenType.t) : prefix_parser =
@@ -81,23 +81,23 @@ let dispatch_prefix_parser (token_type : TokenType.t) : prefix_parser =
       raise TODO
 
 
-let parse_plus : infix_parser = raise TODO
+let parse_plus : infix_parser = fun _ _ -> raise TODO
 
-let parse_infix_minus : infix_parser = raise TODO
+let parse_infix_minus : infix_parser = fun _ _ -> raise TODO
 
-let parse_slash : infix_parser = raise TODO
+let parse_slash : infix_parser = fun _ _ -> raise TODO
 
-let parse_asterisk : infix_parser = raise TODO
+let parse_asterisk : infix_parser = fun _ _ -> raise TODO
 
-let parse_equal : infix_parser = raise TODO
+let parse_equal : infix_parser = fun _ _ -> raise TODO
 
-let parse_not_equal : infix_parser = raise TODO
+let parse_not_equal : infix_parser = fun _ _ -> raise TODO
 
-let parse_less_than : infix_parser = raise TODO
+let parse_less_than : infix_parser = fun _ _ -> raise TODO
 
-let parse_greater_than : infix_parser = raise TODO
+let parse_greater_than : infix_parser = fun _ _ -> raise TODO
 
-let parse_infix_lparen : infix_parser = raise TODO
+let parse_infix_lparen : infix_parser = fun _ _ -> raise TODO
 
 (** Determine which infix parser to use when trampolining. *)
 let dispatch_infix_parser (token_type : TokenType.t) : infix_parser =
