@@ -143,3 +143,25 @@ module ASTTest = struct
 
   let _ = "end"
 end
+
+module ParserTest = struct
+  let input = {|let x = 5;
+     let y = 10;
+     let foobar = 838383;|}
+
+  let lexer = Lexer.of_string input
+
+  let parser = Parser.of_lexer lexer
+
+  let program = Parser.parse_program parser
+
+  let test_let_statement ((let_stmt, name) : AST.LetStatement.t * String.t) : Unit.t =
+    assert (String.equal let_stmt.token.literal "let") ;
+    assert (String.equal let_stmt.name.value name) ;
+    assert (String.equal let_stmt.name.token.literal name)
+
+
+  let _ = List.iter ~f:test_let_statement @@ List.zip_exn program ["x"; "y"; "foobar"]
+
+  let _ = "end"
+end

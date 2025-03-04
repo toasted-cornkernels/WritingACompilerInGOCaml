@@ -125,7 +125,7 @@ let dispatch_infix_parser (token_type : TokenType.t) : infix_parser =
       raise TODO
 
 
-(** Advance the given parser by one token. *)
+(** Advance the given parser by one token, shifting both `current_token` and `peek_token`. *)
 let next_token (parser : t) : t =
   let read_lexer, lexed_token = Lexer.next_token parser.lexer in
   {parser with current_token= parser.peek_token; peek_token= lexed_token; lexer= read_lexer}
@@ -157,3 +157,23 @@ let peek_token_is (parser : t) (token_type : TokenType.t) : bool =
 
 
 let expect_peek (parser : t) (token_type : TokenType.t) : t * bool = raise TODO
+
+let parse_let_statement (parser : t) : LetStatement.t = raise TODO
+
+let parse_statement (parser : t) : Statement.t =
+  match parser.current_token.type_ with
+  | Keyword TokenType.Keyword.Let ->
+      raise TODO
+  | _ ->
+      raise TODO
+
+
+let parse_program (parser : t) : Program.t =
+  let rec parse_program_inner (current_parser : t) (current_statements : Program.t) : Program.t =
+    if not @@ TokenType.equal current_parser.current_token.type_ (Meta TokenType.Meta.EOF) then
+      current_statements
+    else
+      let parsed_statement = parse_statement current_parser in
+      parse_program_inner (next_token current_parser) (parsed_statement :: current_statements)
+  in
+  parse_program_inner parser []
