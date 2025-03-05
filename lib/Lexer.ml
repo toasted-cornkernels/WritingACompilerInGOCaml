@@ -1,13 +1,22 @@
+module F = Format
+
+(** type of a lexer. *)
 type t = {input: String.t; position: Int.t; read_position: Int.t; ch: Char.t}
 
+(** A lexer in the initial state. *)
 let default : t = {input= ""; position= 0; read_position= 0; ch= '\x00'}
+
+let to_string (lexer : t) : String.t =
+  F.sprintf "{input= %s; position= %d; read_position= %d; ch= %c}" lexer.input lexer.position
+    lexer.read_position lexer.ch
+
 
 (** Consume a character of the input, shifting it to be the current char. *)
 let read_char (lexer : t) : t =
   { lexer with
     ch=
       ( if Int.( >= ) lexer.read_position @@ String.length lexer.input then
-          (* Can't consume any further *)
+          (* The given lexer's at the end of the string; it can't consume any further *)
           '\x00'
         else String.get lexer.input lexer.read_position )
   ; position= lexer.read_position
@@ -19,7 +28,7 @@ let of_string (input : String.t) : t = read_char {default with input}
 
 (** Skip the whitespace, and the following ones, that the lexer may currently seeing. *)
 let rec skip_whitespace (lexer : t) : t =
-  match lexer.ch with ' ' | '\t' | '\n' | '\r' -> skip_whitespace lexer | _ -> lexer
+  match lexer.ch with ' ' | '\t' | '\n' | '\r' -> skip_whitespace (read_char lexer) | _ -> lexer
 
 
 (** Peek a character without changing the lexer's current reading position. *)
@@ -112,6 +121,12 @@ let next_token (lexer : t) : t * Token.t =
   | '}' ->
       ( read_char whitespace_ignored_lexer
       , {type_= Delimiter Delimiter.RBrace; literal= Char.to_string whitespace_ignored_lexer.ch} )
+  | '(' ->
+      ( read_char whitespace_ignored_lexer
+      , {type_= Delimiter Delimiter.LParen; literal= Char.to_string whitespace_ignored_lexer.ch} )
+  | ')' ->
+      ( read_char whitespace_ignored_lexer
+      , {type_= Delimiter Delimiter.RParen; literal= Char.to_string whitespace_ignored_lexer.ch} )
   | '\x00' ->
       (read_char whitespace_ignored_lexer, {type_= Meta Meta.EOF; literal= ""})
   | _ ->
@@ -121,6 +136,6 @@ let next_token (lexer : t) : t * Token.t =
       else if Char.is_digit whitespace_ignored_lexer.ch then
         let number_read_lexer, number_read = read_number whitespace_ignored_lexer in
         (number_read_lexer, {type_= IdentLiteral IdentLiteral.Int; literal= number_read})
-      else
+      else (* Oh no, it's something the lexer doesn't recognize *)
         ( whitespace_ignored_lexer
         , {type_= Meta Meta.Illegal; literal= Char.to_string whitespace_ignored_lexer.ch} )

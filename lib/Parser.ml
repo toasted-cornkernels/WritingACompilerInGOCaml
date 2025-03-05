@@ -1,9 +1,11 @@
-(* Recursive Descent (Pratt) Parser *)
+(** Recursive Descent (Pratt) Parser *)
 
 open AST
 open Lexer
 open Token
 module F = Format
+
+exception TODO
 
 type precedence = Lowest | Equals | LessGreater | Sum | Product | Prefix | Call
 [@@deriving compare, equal]
@@ -30,8 +32,6 @@ let precedence_table : (TokenType.t, precedence) Stdlib.Hashtbl.t =
     - The current token the parser is looking at, and
     - the next token to be consumed. *)
 type t = {lexer: Lexer.t; errors: String.t List.t; current_token: Token.t; peek_token: Token.t}
-
-exception TODO
 
 type prefix_parser = t -> AST.Expression.t
 
@@ -144,7 +144,10 @@ let default : t =
 (* TODO: Don't expose the uninitialized parser to the interface. *)
 
 (** Initialize a parser with a given lexer. *)
-let of_lexer (lexer : Lexer.t) : t = {default with lexer} |> next_token |> next_token
+let of_lexer (lexer : Lexer.t) : t =
+  (* Flush away the unneeded `Meta.EOF` token and fill current token and peek token.  *)
+  {default with lexer} |> next_token |> next_token
+
 
 (** Check if the current token this parser is looking at equals to a given token type. *)
 let current_token_is (parser : t) (token_type : TokenType.t) : bool =
@@ -160,17 +163,23 @@ let expect_peek (parser : t) (token_type : TokenType.t) : t * bool = raise TODO
 
 let parse_let_statement (parser : t) : LetStatement.t = raise TODO
 
+let parse_expression_statement (parser : t) : ExpressionStatement.t = raise TODO
+
+let parse_return_statement (parser : t) : ReturnStatement.t = raise TODO
+
 let parse_statement (parser : t) : Statement.t =
   match parser.current_token.type_ with
   | Keyword TokenType.Keyword.Let ->
-      raise TODO
+      Let (parse_let_statement parser)
+  | Keyword TokenType.Keyword.Return ->
+      Return (parse_return_statement parser)
   | _ ->
-      raise TODO
+      Expression (parse_expression_statement parser)
 
 
 let parse_program (parser : t) : Program.t =
   let rec parse_program_inner (current_parser : t) (current_statements : Program.t) : Program.t =
-    if not @@ TokenType.equal current_parser.current_token.type_ (Meta TokenType.Meta.EOF) then
+    if TokenType.equal current_parser.current_token.type_ (Meta TokenType.Meta.EOF) then
       current_statements
     else
       let parsed_statement = parse_statement current_parser in

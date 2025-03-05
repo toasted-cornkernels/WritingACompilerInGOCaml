@@ -1,6 +1,7 @@
 module F = Format
 
-type node = Statement of statement | Expression of expression
+(** A type of an AST node. *)
+type t = Statement of statement | Expression of expression
 
 and program = statement list
 
@@ -10,13 +11,17 @@ and statement =
   | Expression of expression_statement
   | Block of block_statement
 
+(* The let statement can either only declare a variable or define it with an expression. *)
 and let_statement = {token: Token.t; name: identifier; value: expression option}
 
+(* The return statement can return with or without an expression. *)
 and return_statement = {token: Token.t; value: expression option}
 
+(* Note that this definition also allows for empty blocks. *)
 and block_statement = {token: Token.t; statements: statement list}
 
-and expression_statement = {token: Token.t; expression: expression option}
+(* An expression statement contains a single expression or is empty. *)
+and expression_statement = {token: Token.t; expression: expression option} [@@deriving equal]
 
 and expression =
   | Identifier of identifier
@@ -34,18 +39,23 @@ and boolean = {token: Token.t; value: Bool.t}
 
 and integer = {token: Token.t; value: Int.t}
 
+(* A prefix expression has only one (right-hand side) operand. *)
 and prefix_expression = {token: Token.t; operator: String.t; right: expression}
 
+(* An infix expression carries two (left and right hand side) operands. *)
 and infix_expression = {token: Token.t; left: expression; operator: String.t; right: expression}
 
+(* An if expression can have both then and else branches, or can choose to have only then branch. *)
 and if_expression =
   {token: Token.t; condition: expression; then_: block_statement; else_: block_statement option}
 
+(* A function literal consists of a parameter list and a body.  *)
 and function_literal = {token: Token.t; parameters: identifier list; body: block_statement}
 
+(* A call expression consists of a function being called and a list of arguments passed to it. *)
 and call_expression = {token: Token.t; function_: expression; arguments: expression list}
 
-(** The interface for an AST node. *)
+(** The interface of an AST node. *)
 module type NodeSig = sig
   type t
 
@@ -53,9 +63,10 @@ module type NodeSig = sig
   (** Return the literal representation of the given node. *)
 
   val to_string : t -> string
+  (** Get the source code form of this AST node. *)
 end
 
-(** The interface for an expression node, implementing the `Node` signature. *)
+(** The interface of an expression node, implementing the `Node` signature. *)
 module MakeExpression (SubType : NodeSig) = struct
   type t = SubType.t
 
@@ -64,7 +75,7 @@ module MakeExpression (SubType : NodeSig) = struct
   let to_string : t -> string = SubType.to_string
 end
 
-(** The interface for a statement, implementing the `Node` signature. *)
+(** The interface of a statement, implementing the `Node` signature. *)
 module MakeStatement (SubType : NodeSig) = struct
   type t = SubType.t
 
@@ -216,7 +227,7 @@ and ReturnStatement : (NodeSig with type t = return_statement) = MakeStatement (
 end)
 
 and ExpressionStatement : (NodeSig with type t = expression_statement) = MakeStatement (struct
-  type t = expression_statement
+  type t = expression_statement [@@deriving equal]
 
   let token_literal ({token; _} : t) : string = token.literal
 
@@ -260,7 +271,7 @@ and Statement : (NodeSig with type t = statement) = struct
         BlockStatement.to_string block_stmt
 end
 
-(** The root node of an AST, whose children are statements. *)
+(** The root node of an AST whose children are statements. *)
 module Program : NodeSig with type t = program = struct
   type t = program
 

@@ -3,6 +3,8 @@ let prompt = ">> "
 let rec start () : unit =
   let open Token in
   let open TokenType in
+  (* Advance the lexer and print the token it's recognized,
+     until it reaches the end of the string it's given. *)
   let rec print_next_token_until_EOF (lexer : Lexer.t) : unit =
     let lexed_lexer, lexed_token = Lexer.next_token lexer in
     match lexed_token with

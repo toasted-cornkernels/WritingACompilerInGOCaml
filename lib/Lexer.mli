@@ -3,6 +3,8 @@ type t
 val read_char : t -> t
 (** Consume a character of the input, shifting it to be the current char. *)
 
+val to_string : t -> String.t
+
 val of_string : String.t -> t
 (** Create a lexer that reads the input string from the beginning. *)
 
