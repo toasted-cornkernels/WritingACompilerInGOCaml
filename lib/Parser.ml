@@ -3,6 +3,7 @@
 open AST
 open Lexer
 open Token
+open Token.TokenType
 module F = Format
 
 exception TODO
@@ -101,7 +102,6 @@ let parse_infix_lparen : infix_parser = fun _ _ -> raise TODO
 
 (** Determine which infix parser to use when trampolining. *)
 let dispatch_infix_parser (token_type : TokenType.t) : infix_parser =
-  let open TokenType in
   match token_type with
   | Operator Operator.Plus ->
       parse_plus
@@ -125,6 +125,8 @@ let dispatch_infix_parser (token_type : TokenType.t) : infix_parser =
       raise TODO
 
 
+let parse_expression (parser : t) (precendence : precedence) : t * Expression.t = raise TODO
+
 (** Advance the given parser by one token, shifting both `current_token` and `peek_token`. *)
 let next_token (parser : t) : t =
   let read_lexer, lexed_token = Lexer.next_token parser.lexer in
@@ -133,7 +135,6 @@ let next_token (parser : t) : t =
 
 (** An uninitialized parser. *)
 let default : t =
-  let open Token.TokenType in
   let eof = Meta.EOF in
   { lexer= Lexer.of_string ""
   ; errors= []
@@ -159,22 +160,76 @@ let peek_token_is (parser : t) (token_type : TokenType.t) : bool =
   TokenType.equal parser.peek_token.type_ token_type
 
 
-let expect_peek (parser : t) (token_type : TokenType.t) : t * bool = raise TODO
+(** Append a wrong peeked token to the parser's error list. *)
+let peek_error (parser : t) (token_type : Token.TokenType.t) : t =
+  let msg =
+    F.asprintf "Expected next token to be %s, got %s instead." (TokenType.to_string token_type)
+      (TokenType.to_string parser.peek_token.type_)
+  in
+  (* TODO: Define a getter that reverses the errors list; just cons everything *)
+  {parser with errors= parser.errors @ [msg]}
 
-let parse_let_statement (parser : t) : LetStatement.t = raise TODO
 
-let parse_expression_statement (parser : t) : ExpressionStatement.t = raise TODO
+let expect_peek (parser : t) (token_type : TokenType.t) : t * bool =
+  if peek_token_is parser token_type then (next_token parser, true)
+  else (peek_error parser token_type, false)
 
-let parse_return_statement (parser : t) : ReturnStatement.t = raise TODO
 
-let parse_statement (parser : t) : Statement.t =
+let parse_let_statement (parser : t) : t * LetStatement.t =
+  let let_token = parser.current_token in
+  match expect_peek parser @@ IdentLiteral IdentLiteral.Ident with
+  | ident_peeked_parser, true -> (
+      let ident_consumed_parser = next_token ident_peeked_parser in
+      let identifier_token : identifier =
+        {token= parser.current_token; value= parser.current_token.literal}
+      in
+      match expect_peek ident_consumed_parser @@ Operator Operator.Assign with
+      | assign_peeked_parser, true -> (
+          let assign_consumed_parser = next_token assign_peeked_parser in
+          match expect_peek assign_consumed_parser @@ Delimiter Delimiter.Semicolon with
+          | semicolon_peeked_parser, true ->
+              let let_statement : LetStatement.t =
+                { token= let_token
+                ; name= identifier_token
+                ; value= Some (snd @@ parse_expression parser Lowest) }
+              in
+              (next_token semicolon_peeked_parser, let_statement)
+          | error_parser, false ->
+              raise TODO )
+      | error_parser, false ->
+          raise TODO )
+  | error_parser, false ->
+      raise TODO
+
+
+let parse_return_statement (parser : t) : t * ReturnStatement.t =
+  let return_token = parser.current_token in
+  let return_token_consumed_parser = next_token parser in
+  let expression_parsed_parser, return_value =
+    parse_expression return_token_consumed_parser Lowest
+  in
+  (* TODO: account for empty returns *)
+  let return_statement : ReturnStatement.t = {token= return_token; value= Some return_value} in
+  if peek_token_is expression_parsed_parser @@ Delimiter Delimiter.Semicolon then
+    (next_token expression_parsed_parser, return_statement)
+  else (expression_parsed_parser, return_statement)
+
+
+let parse_expression_statement (parser : t) : t * ExpressionStatement.t = raise TODO
+
+let parse_statement (parser : t) : t * Statement.t =
   match parser.current_token.type_ with
-  | Keyword TokenType.Keyword.Let ->
-      Let (parse_let_statement parser)
-  | Keyword TokenType.Keyword.Return ->
-      Return (parse_return_statement parser)
+  | Keyword Keyword.Let ->
+      let let_statement_parsed_parser, let_statement = parse_let_statement parser in
+      (let_statement_parsed_parser, Let let_statement)
+  | Keyword Keyword.Return ->
+      let return_statement_parsed_parser, return_statement = parse_return_statement parser in
+      (return_statement_parsed_parser, Return return_statement)
   | _ ->
-      Expression (parse_expression_statement parser)
+      let expression_statement_parsed_parser, expression_statement =
+        parse_expression_statement parser
+      in
+      (expression_statement_parsed_parser, Expression expression_statement)
 
 
 let parse_program (parser : t) : Program.t =
@@ -182,7 +237,9 @@ let parse_program (parser : t) : Program.t =
     if TokenType.equal current_parser.current_token.type_ (Meta TokenType.Meta.EOF) then
       current_statements
     else
-      let parsed_statement = parse_statement current_parser in
-      parse_program_inner (next_token current_parser) (parsed_statement :: current_statements)
+      let statement_parsed_parser, parsed_statement = parse_statement current_parser in
+      parse_program_inner
+        (next_token statement_parsed_parser)
+        (parsed_statement :: current_statements)
   in
   parse_program_inner parser []

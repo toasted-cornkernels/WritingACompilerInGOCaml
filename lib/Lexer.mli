@@ -1,4 +1,4 @@
-type t
+type t = {input: String.t; position: Int.t; read_position: Int.t; ch: Char.t}
 
 val read_char : t -> t
 (** Consume a character of the input, shifting it to be the current char. *)

@@ -2,8 +2,9 @@
  (dev
   (flags (:standard -g -short-paths -safe-string -strict-formats -strict-sequence -bin-annot -warn-error -A))))
 
-(test
- (name WritingACompilerInGOCamlTest)
+(tests
+ (names ASTTest LexerTest
+        ; ParserTest
+ )
  (flags (:standard -open Core -open WritingACompilerInGOCamlLib))
- (libraries WritingACompilerInGOCamlLib core)
- (preprocess (pps ppx_compare ppx_jane)))
+ (libraries alcotest WritingACompilerInGOCamlLib core))
