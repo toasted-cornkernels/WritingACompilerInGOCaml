@@ -1,13 +1,14 @@
 (** Recursive Descent (Pratt) Parser *)
 
 open AST
-open Lexer
 open Token
 open Token.TokenType
 module F = Format
 
 exception TODO
+
 exception No_Prefix_Parser_Available of TokenType.t
+
 exception No_Infix_Parser_Available of TokenType.t
 
 type precedence =
@@ -38,108 +39,12 @@ let precedence_table : (TokenType.t, precedence) Stdlib.Hashtbl.t =
 
 (** The parser type that contains:
     - A lexer for reading in tokens,
-    - A list of errors for TODO,
+    - A list of errors for parsing error reporting,
     - The current token the parser is looking at, and
     - the next token to be consumed. *)
 type t = {lexer: Lexer.t; errors: String.t List.t; current_token: Token.t; peek_token: Token.t}
 
 exception TODO_Parser_Error_Handle of t
-
-type prefix_parser = t -> AST.Expression.t
-
-type infix_parser = t -> AST.Expression.t -> AST.Expression.t
-
-let parse_identifier : prefix_parser = fun _ -> raise TODO
-
-let parse_integer : prefix_parser = fun _ -> raise TODO
-
-let parse_bang : prefix_parser = fun _ -> raise TODO
-
-let parse_minus : prefix_parser = fun _ -> raise TODO
-
-let parse_true : prefix_parser = fun _ -> raise TODO
-
-let parse_false : prefix_parser = fun _ -> raise TODO
-
-let parse_lparen : prefix_parser = fun _ -> raise TODO
-
-let parse_if : prefix_parser = fun _ -> raise TODO
-
-let parse_function : prefix_parser = fun _ -> raise TODO
-
-(** Determine which prefix parser to use when trampolining. *)
-let dispatch_prefix_parser (token_type : TokenType.t) : prefix_parser =
-  let open TokenType in
-  match token_type with
-  | IdentLiteral IdentLiteral.Ident ->
-      parse_identifier
-  | IdentLiteral IdentLiteral.Int ->
-      parse_integer
-  | Operator Operator.Bang ->
-      parse_bang
-  | Operator Operator.Minus ->
-      parse_minus
-  | Keyword Keyword.True ->
-      parse_true
-  | Keyword Keyword.False ->
-      parse_false
-  | Delimiter Delimiter.LParen ->
-      parse_lparen
-  | Keyword Keyword.If ->
-      parse_if
-  | Keyword Keyword.Function ->
-      parse_function
-  | _ ->
-      raise @@ No_Prefix_Parser_Available token_type
-
-
-let parse_plus : infix_parser = fun _ _ -> raise TODO
-
-let parse_infix_minus : infix_parser = fun _ _ -> raise TODO
-
-let parse_slash : infix_parser = fun _ _ -> raise TODO
-
-let parse_asterisk : infix_parser = fun _ _ -> raise TODO
-
-let parse_equal : infix_parser = fun _ _ -> raise TODO
-
-let parse_not_equal : infix_parser = fun _ _ -> raise TODO
-
-let parse_less_than : infix_parser = fun _ _ -> raise TODO
-
-let parse_greater_than : infix_parser = fun _ _ -> raise TODO
-
-let parse_infix_lparen : infix_parser = fun _ _ -> raise TODO
-
-(** Determine which infix parser to use when trampolining. *)
-let dispatch_infix_parser (token_type : TokenType.t) : infix_parser =
-  match token_type with
-  | Operator Operator.Plus ->
-      parse_plus
-  | Operator Operator.Minus ->
-      parse_infix_minus
-  | Operator Operator.Asterisk ->
-      parse_asterisk
-  | Operator Operator.Slash ->
-      parse_slash
-  | Operator Operator.Equal ->
-      parse_equal
-  | Operator Operator.NotEqual ->
-      parse_not_equal
-  | Operator Operator.LessThan ->
-      parse_less_than
-  | Operator Operator.GreaterThan ->
-      parse_greater_than
-  | Delimiter Delimiter.LParen ->
-      parse_infix_lparen
-  | _ ->
-      raise @@ No_Infix_Parser_Available token_type
-
-
-let parse_expression (parser : t) (precendence : precedence) : t * Expression.t =
-let infix_parser = dispatch_infix_parser parser.current_token.type_ in
-raise TODO
-
 
 (** Advance the given parser by one token, shifting both `current_token` and `peek_token`. *)
 let next_token (parser : t) : t =
@@ -156,11 +61,9 @@ let default : t =
   ; peek_token= {type_= Meta eof; literal= Meta.to_string eof} }
 
 
-(* TODO: Don't expose the uninitialized parser to the interface. *)
-
 (** Initialize a parser with a given lexer. *)
 let of_lexer (lexer : Lexer.t) : t =
-  (* Flush away the unneeded `Meta.EOF` token and fill current token and peek token.  *)
+  (* Flush away the unneeded `Meta.EOF` token and fill current token and peek token. *)
   {default with lexer} |> next_token |> next_token
 
 
@@ -188,6 +91,122 @@ let expect_peek (parser : t) (token_type : TokenType.t) : t * bool =
   if peek_token_is parser token_type then (next_token parser, true)
   else (peek_error parser token_type, false)
 
+
+(* ==================== Expression Parsers ==================== *)
+
+exception Not_An_Integer of string
+
+type prefix_parser = t -> t * AST.Expression.t
+
+type infix_parser = t -> AST.Expression.t -> t * AST.Expression.t
+
+let rec parse_expression (parser : t) (precendence : precedence) : t * Expression.t =
+  let infix_parser = dispatch_prefix_parser parser.current_token.type_ in
+  let lhs_expression = infix_parser parser in
+  raise TODO
+
+
+and parse_identifier : prefix_parser =
+ fun parser ->
+  (* Uhh.. shouldn't we advance the parser here by one token? *)
+  (parser, Identifier {token= parser.current_token; value= parser.current_token.literal})
+
+
+and parse_integer : prefix_parser =
+ fun parser ->
+  match Int.of_string_opt parser.current_token.literal with
+  | Some value ->
+      (* Uhh.. shouldn't we advance the parser here by one token? *)
+      (parser, Integer {token= parser.current_token; value})
+  | None ->
+      raise (Not_An_Integer parser.current_token.literal)
+
+
+and parse_prefix_expression : prefix_parser =
+ fun parser ->
+  let current_operator_consumed_parser = next_token parser in
+  let right_expression_parsed_parser, expression =
+    parse_expression current_operator_consumed_parser Prefix
+  in
+  ( right_expression_parsed_parser
+  , Prefix {token= parser.current_token; operator= parser.current_token.literal; right= expression}
+  )
+
+
+and parse_boolean : prefix_parser = fun _ -> raise TODO
+
+and parse_grouped_expression : prefix_parser = fun _ -> raise TODO
+
+and parse_if : prefix_parser = fun _ -> raise TODO
+
+and parse_function : prefix_parser = fun _ -> raise TODO
+
+and parse_plus : infix_parser = fun _ _ -> raise TODO
+
+and parse_infix_minus : infix_parser = fun _ _ -> raise TODO
+
+and parse_slash : infix_parser = fun _ _ -> raise TODO
+
+and parse_asterisk : infix_parser = fun _ _ -> raise TODO
+
+and parse_equal : infix_parser = fun _ _ -> raise TODO
+
+and parse_not_equal : infix_parser = fun _ _ -> raise TODO
+
+and parse_less_than : infix_parser = fun _ _ -> raise TODO
+
+and parse_greater_than : infix_parser = fun _ _ -> raise TODO
+
+and parse_infix_lparen : infix_parser = fun _ _ -> raise TODO
+
+(** Determine which infix parser to use when trampolining. *)
+and dispatch_infix_parser (token_type : TokenType.t) : infix_parser =
+  match token_type with
+  | Operator Operator.Plus ->
+      parse_plus
+  | Operator Operator.Minus ->
+      parse_infix_minus
+  | Operator Operator.Asterisk ->
+      parse_asterisk
+  | Operator Operator.Slash ->
+      parse_slash
+  | Operator Operator.Equal ->
+      parse_equal
+  | Operator Operator.NotEqual ->
+      parse_not_equal
+  | Operator Operator.LessThan ->
+      parse_less_than
+  | Operator Operator.GreaterThan ->
+      parse_greater_than
+  | Delimiter Delimiter.LParen ->
+      parse_infix_lparen
+  | _ ->
+      raise @@ No_Infix_Parser_Available token_type
+
+
+(** Determine which prefix parser to use when trampolining. *)
+and dispatch_prefix_parser (token_type : TokenType.t) : prefix_parser =
+  let open TokenType in
+  match token_type with
+  | IdentLiteral IdentLiteral.Ident ->
+      parse_identifier
+  | IdentLiteral IdentLiteral.Int ->
+      parse_integer
+  | Operator Operator.Bang | Operator Operator.Minus ->
+      parse_prefix_expression
+  | Keyword Keyword.True | Keyword Keyword.False ->
+      parse_boolean
+  | Delimiter Delimiter.LParen ->
+      parse_grouped_expression
+  | Keyword Keyword.If ->
+      parse_if
+  | Keyword Keyword.Function ->
+      parse_function
+  | _ ->
+      raise @@ No_Prefix_Parser_Available token_type
+
+
+(* ==================== Statement Parsers ==================== *)
 
 let parse_let_statement (parser : t) : t * LetStatement.t =
   let let_token = parser.current_token in
