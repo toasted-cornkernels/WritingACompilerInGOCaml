@@ -7,8 +7,17 @@ open Token.TokenType
 module F = Format
 
 exception TODO
+exception No_Prefix_Parser_Available of TokenType.t
+exception No_Infix_Parser_Available of TokenType.t
 
-type precedence = Lowest | Equals | LessGreater | Sum | Product | Prefix | Call
+type precedence =
+  | Lowest
+  | Equals (* == *)
+  | LessGreater (* < or > *)
+  | Sum (* + *)
+  | Product (* * *)
+  | Prefix (* -EXP or !EXP *)
+  | Call (* F(X) *)
 [@@deriving compare, equal]
 
 let precedence_table : (TokenType.t, precedence) Stdlib.Hashtbl.t =
@@ -33,6 +42,8 @@ let precedence_table : (TokenType.t, precedence) Stdlib.Hashtbl.t =
     - The current token the parser is looking at, and
     - the next token to be consumed. *)
 type t = {lexer: Lexer.t; errors: String.t List.t; current_token: Token.t; peek_token: Token.t}
+
+exception TODO_Parser_Error_Handle of t
 
 type prefix_parser = t -> AST.Expression.t
 
@@ -79,7 +90,7 @@ let dispatch_prefix_parser (token_type : TokenType.t) : prefix_parser =
   | Keyword Keyword.Function ->
       parse_function
   | _ ->
-      raise TODO
+      raise @@ No_Prefix_Parser_Available token_type
 
 
 let parse_plus : infix_parser = fun _ _ -> raise TODO
@@ -122,10 +133,13 @@ let dispatch_infix_parser (token_type : TokenType.t) : infix_parser =
   | Delimiter Delimiter.LParen ->
       parse_infix_lparen
   | _ ->
-      raise TODO
+      raise @@ No_Infix_Parser_Available token_type
 
 
-let parse_expression (parser : t) (precendence : precedence) : t * Expression.t = raise TODO
+let parse_expression (parser : t) (precendence : precedence) : t * Expression.t =
+let infix_parser = dispatch_infix_parser parser.current_token.type_ in
+raise TODO
+
 
 (** Advance the given parser by one token, shifting both `current_token` and `peek_token`. *)
 let next_token (parser : t) : t =
@@ -195,11 +209,11 @@ let parse_let_statement (parser : t) : t * LetStatement.t =
               in
               (next_token semicolon_peeked_parser, let_statement)
           | error_parser, false ->
-              raise TODO )
+              raise @@ TODO_Parser_Error_Handle error_parser )
       | error_parser, false ->
-          raise TODO )
+          raise @@ TODO_Parser_Error_Handle error_parser )
   | error_parser, false ->
-      raise TODO
+      raise @@ TODO_Parser_Error_Handle error_parser
 
 
 let parse_return_statement (parser : t) : t * ReturnStatement.t =
@@ -215,7 +229,15 @@ let parse_return_statement (parser : t) : t * ReturnStatement.t =
   else (expression_parsed_parser, return_statement)
 
 
-let parse_expression_statement (parser : t) : t * ExpressionStatement.t = raise TODO
+let parse_expression_statement (parser : t) : t * ExpressionStatement.t =
+  let current_token = parser.current_token in
+  let expression_parsed_parser, expression = parse_expression parser Lowest in
+  if peek_token_is expression_parsed_parser (Delimiter Delimiter.Semicolon) then
+    (next_token expression_parsed_parser, {token= current_token; expression= Some expression})
+  else
+    (* Make semicolons in an expression statement optional, for ease of input in the REPL. *)
+    (expression_parsed_parser, {token= current_token; expression= Some expression})
+
 
 let parse_statement (parser : t) : t * Statement.t =
   match parser.current_token.type_ with
