@@ -3,8 +3,6 @@
   (flags (:standard -g -short-paths -safe-string -strict-formats -strict-sequence -bin-annot -warn-error -A))))
 
 (tests
- (names ASTTest LexerTest
-        ; ParserTest
- )
+ (names ASTTest LexerTest ParserTest)
  (flags (:standard -open Core -open WritingACompilerInGOCamlLib))
  (libraries alcotest WritingACompilerInGOCamlLib core))
