@@ -97,17 +97,11 @@ let errors (parser : t) : string list = List.rev parser.errors
 
 (* ==================== Expression Parsers ==================== *)
 
-exception Not_An_Integer of string
-
-exception Not_A_Boolean of string
-
-exception Not_A_Group_Expr
-
 type prefix_parser = t -> t * AST.Expression.t option
 
 type infix_parser = t -> AST.Expression.t -> t * AST.Expression.t option
 
-let rec parse_expression (parser : t) (precendence : precedence) : t * Expression.t =
+let rec parse_expression (parser : t) (precedence : precedence) : t * Expression.t =
   let infix_parser = dispatch_prefix_parser parser.current_token.type_ in
   let lhs_expression = infix_parser parser in
   raise TODO
@@ -287,7 +281,7 @@ and parse_infix_lparen : infix_parser = fun _ _ -> raise TODO
 
 (* ==================== Statement Parsers ==================== *)
 
-let parse_let_statement (parser : t) : t * LetStatement.t =
+and parse_let_statement (parser : t) : t * LetStatement.t =
   let let_token = parser.current_token in
   match expect_peek parser @@ IdentLiteral IdentLiteral.Ident with
   | ident_peeked_parser, true -> (
@@ -314,7 +308,7 @@ let parse_let_statement (parser : t) : t * LetStatement.t =
       raise @@ TODO_Parser_Error_Handle error_parser
 
 
-let parse_return_statement (parser : t) : t * ReturnStatement.t =
+and parse_return_statement (parser : t) : t * ReturnStatement.t =
   let return_token = parser.current_token in
   let return_token_consumed_parser = next_token parser in
   let expression_parsed_parser, return_value =
@@ -327,7 +321,7 @@ let parse_return_statement (parser : t) : t * ReturnStatement.t =
   else (expression_parsed_parser, return_statement)
 
 
-let parse_expression_statement (parser : t) : t * ExpressionStatement.t =
+and parse_expression_statement (parser : t) : t * ExpressionStatement.t =
   let current_token = parser.current_token in
   let expression_parsed_parser, expression = parse_expression parser Lowest in
   if peek_token_is expression_parsed_parser (Delimiter Delimiter.Semicolon) then
@@ -337,7 +331,7 @@ let parse_expression_statement (parser : t) : t * ExpressionStatement.t =
     (expression_parsed_parser, {token= current_token; expression= Some expression})
 
 
-let rec parse_statement (parser : t) : t * Statement.t =
+and parse_statement (parser : t) : t * Statement.t =
   match parser.current_token.type_ with
   | Keyword Keyword.Let ->
       let let_statement_parsed_parser, let_statement = parse_let_statement parser in
