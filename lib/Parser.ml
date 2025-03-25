@@ -251,45 +251,24 @@ and parse_function : prefix_parser = fun _ -> raise TODO
 (** Determine which infix parser to use when trampolining. *)
 and dispatch_infix_parser (token_type : TokenType.t) : infix_parser =
   match token_type with
-  | Operator Operator.Plus ->
-      parse_plus
-  | Operator Operator.Minus ->
-      parse_infix_minus
-  | Operator Operator.Asterisk ->
-      parse_asterisk
-  | Operator Operator.Slash ->
-      parse_slash
-  | Operator Operator.Equal ->
-      parse_equal
-  | Operator Operator.NotEqual ->
-      parse_not_equal
-  | Operator Operator.LessThan ->
-      parse_less_than
+  | Operator Operator.Plus
+  | Operator Operator.Minus
+  | Operator Operator.Asterisk
+  | Operator Operator.Slash
+  | Operator Operator.Equal
+  | Operator Operator.NotEqual
+  | Operator Operator.LessThan
   | Operator Operator.GreaterThan ->
-      parse_greater_than
+      parse_infix_expression
   | Delimiter Delimiter.LParen ->
-      parse_infix_lparen
+      parse_call_expression
   | _ ->
       raise @@ No_Infix_Parser_Available token_type
 
 
-and parse_plus : infix_parser = fun _ _ -> raise TODO
+and parse_infix_expression : infix_parser = fun parser lhs -> raise TODO
 
-and parse_infix_minus : infix_parser = fun _ _ -> raise TODO
-
-and parse_slash : infix_parser = fun _ _ -> raise TODO
-
-and parse_asterisk : infix_parser = fun _ _ -> raise TODO
-
-and parse_equal : infix_parser = fun _ _ -> raise TODO
-
-and parse_not_equal : infix_parser = fun _ _ -> raise TODO
-
-and parse_less_than : infix_parser = fun _ _ -> raise TODO
-
-and parse_greater_than : infix_parser = fun _ _ -> raise TODO
-
-and parse_infix_lparen : infix_parser = fun _ _ -> raise TODO
+and parse_call_expression : infix_parser = fun parser function_ -> raise TODO
 
 (* ==================== Statement Parsers ==================== *)
 
