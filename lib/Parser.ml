@@ -101,7 +101,7 @@ type prefix_parser = t -> t * AST.Expression.t option
 
 type infix_parser = t -> AST.Expression.t -> t * AST.Expression.t option
 
-let rec parse_expression (parser : t) (precedence : precedence) : t * Expression.t =
+let rec parse_expression (parser : t) (precedence : precedence) : t * Expression.t option =
   let infix_parser = dispatch_prefix_parser parser.current_token.type_ in
   let lhs_expression = infix_parser parser in
   raise TODO
@@ -151,14 +151,18 @@ and parse_integer : prefix_parser =
 and parse_prefix_expression : prefix_parser =
  fun parser ->
   let current_operator_consumed_parser = next_token parser in
-  let right_expression_parsed_parser, expression =
+  let right_expression_parsed_parser, expression_opt =
     parse_expression current_operator_consumed_parser Prefix
   in
-  ( right_expression_parsed_parser
-  , Some
-      (Prefix
-         {token= parser.current_token; operator= parser.current_token.literal; right= expression} )
-  )
+  match expression_opt with
+  | Some expression ->
+      ( right_expression_parsed_parser
+      , Some
+          (Prefix
+             {token= parser.current_token; operator= parser.current_token.literal; right= expression}
+          ) )
+  | None ->
+      (right_expression_parsed_parser, None)
 
 
 and parse_boolean : prefix_parser =
@@ -178,58 +182,66 @@ and parse_boolean : prefix_parser =
 
 and parse_grouped_expression : prefix_parser =
  fun parser ->
-  let expression_parsed_parser, expression = parse_expression parser Lowest in
+  let expression_parsed_parser, expression_opt = parse_expression parser Lowest in
   match expect_peek expression_parsed_parser (Delimiter RParen) with
   | rparen_consumed_parser, true ->
-      (rparen_consumed_parser, Some expression)
+      (rparen_consumed_parser, expression_opt)
   | error_parser, false ->
       (error_parser, None)
 
 
+(* What a beep-ing abomination *)
 and parse_if : prefix_parser =
  fun parser ->
   let if_token = parser.current_token in
   match expect_peek parser (Delimiter LParen) with
   | lparen_consumed_parser, true -> (
-      let expression_parsed_parser, condition_expression =
-        (* If-expressions have the lowest precedence. *)
+      let expression_parsed_parser, condition_expression_opt =
         parse_expression lparen_consumed_parser Lowest
       in
-      match expect_peek expression_parsed_parser (Delimiter RParen) with
-      | rparen_consumed_parser, true -> (
-        match expect_peek rparen_consumed_parser (Delimiter LBrace) with
-        | lbrace_consumed_parser, true -> (
-            let consequence_block_parsed_parser, consequence =
-              parse_block_statement lbrace_consumed_parser
-            in
-            match peek_token_is consequence_block_parsed_parser (Keyword Else) with
-            | true -> (
-              match expect_peek consequence_block_parsed_parser (Delimiter LBrace) with
-              | lbrace_consumed_parser, true ->
-                  let alternative_block_parsed_parser, alternative =
-                    parse_block_statement lbrace_consumed_parser
-                  in
-                  ( alternative_block_parsed_parser
-                  , Some
-                      (If
-                         { token= if_token
-                         ; condition= condition_expression
-                         ; then_= consequence
-                         ; else_= Some alternative } ) )
-              | error_parser, false ->
-                  (error_parser, None) )
-            | false ->
-                ( consequence_block_parsed_parser
-                , Some
-                    (If
-                       { token= if_token
-                       ; condition= condition_expression
-                       ; then_= consequence
-                       ; else_= None } ) ) )
+      match condition_expression_opt with
+      | Some condition_expression -> (
+        match expect_peek expression_parsed_parser (Delimiter RParen) with
+        | rparen_consumed_parser, true -> (
+          match expect_peek rparen_consumed_parser (Delimiter LBrace) with
+          | lbrace_consumed_parser, true -> (
+              let consequence_block_parsed_parser, consequence_opt =
+                parse_block_statement lbrace_consumed_parser
+              in
+              match consequence_opt with
+              | Some consequence -> (
+                match peek_token_is consequence_block_parsed_parser (Keyword Else) with
+                | true -> (
+                  match expect_peek consequence_block_parsed_parser (Delimiter LBrace) with
+                  | lbrace_consumed_parser, true ->
+                      let alternative_block_parsed_parser, alternative_opt =
+                        parse_block_statement lbrace_consumed_parser
+                      in
+                      ( alternative_block_parsed_parser
+                      , Some
+                          (If
+                             { token= if_token
+                             ; condition= condition_expression
+                             ; then_= consequence
+                             ; else_= alternative_opt } ) )
+                  | error_parser, false ->
+                      (error_parser, None) )
+                | false ->
+                    ( consequence_block_parsed_parser
+                    , Some
+                        (If
+                           { token= if_token
+                           ; condition= condition_expression
+                           ; then_= consequence
+                           ; else_= None } ) ) )
+              | None ->
+                  (consequence_block_parsed_parser, None) )
+          | error_parser, false ->
+              (error_parser, None) )
         | error_parser, false ->
             (error_parser, None) )
-      | error_parser, false ->
-          (error_parser, None) )
+      | None ->
+          (expression_parsed_parser, None) )
   | error_parser, false ->
       (error_parser, None)
 
@@ -281,72 +293,88 @@ and parse_infix_lparen : infix_parser = fun _ _ -> raise TODO
 
 (* ==================== Statement Parsers ==================== *)
 
-and parse_let_statement (parser : t) : t * LetStatement.t =
+(* "consumed" == "current token is" *)
+
+and parse_let_statement (parser : t) : t * LetStatement.t option =
   let let_token = parser.current_token in
   match expect_peek parser @@ IdentLiteral IdentLiteral.Ident with
-  | ident_peeked_parser, true -> (
-      let ident_consumed_parser = next_token ident_peeked_parser in
+  | ident_consumed_parser, true -> (
       let identifier_token : identifier =
         {token= parser.current_token; value= parser.current_token.literal}
       in
       match expect_peek ident_consumed_parser @@ Operator Operator.Assign with
-      | assign_peeked_parser, true -> (
-          let assign_consumed_parser = next_token assign_peeked_parser in
-          match expect_peek assign_consumed_parser @@ Delimiter Delimiter.Semicolon with
-          | semicolon_peeked_parser, true ->
+      | assign_consumed_parser, true -> (
+          let expression_consumed_parser = next_token assign_consumed_parser in
+          let expression_parsed_parser, expression_opt =
+            parse_expression expression_consumed_parser Lowest
+          in
+          match peek_token_is expression_parsed_parser @@ Delimiter Delimiter.Semicolon with
+          | true ->
               let let_statement : LetStatement.t =
-                { token= let_token
-                ; name= identifier_token
-                ; value= Some (snd @@ parse_expression parser Lowest) }
+                {token= let_token; name= identifier_token; value= expression_opt}
               in
-              (next_token semicolon_peeked_parser, let_statement)
-          | error_parser, false ->
-              raise @@ TODO_Parser_Error_Handle error_parser )
+              (next_token expression_parsed_parser, Some let_statement)
+          | false ->
+              let let_statement : LetStatement.t =
+                {token= let_token; name= identifier_token; value= expression_opt}
+              in
+              (expression_parsed_parser, Some let_statement) )
       | error_parser, false ->
-          raise @@ TODO_Parser_Error_Handle error_parser )
+          (error_parser, None) )
   | error_parser, false ->
-      raise @@ TODO_Parser_Error_Handle error_parser
+      (error_parser, None)
 
 
-and parse_return_statement (parser : t) : t * ReturnStatement.t =
+and parse_return_statement (parser : t) : t * ReturnStatement.t option =
   let return_token = parser.current_token in
   let return_token_consumed_parser = next_token parser in
-  let expression_parsed_parser, return_value =
+  let expression_parsed_parser, return_value_opt =
     parse_expression return_token_consumed_parser Lowest
   in
   (* TODO: account for empty returns *)
-  let return_statement : ReturnStatement.t = {token= return_token; value= Some return_value} in
+  let return_statement : ReturnStatement.t = {token= return_token; value= return_value_opt} in
   if peek_token_is expression_parsed_parser @@ Delimiter Delimiter.Semicolon then
-    (next_token expression_parsed_parser, return_statement)
-  else (expression_parsed_parser, return_statement)
+    (next_token expression_parsed_parser, Some return_statement)
+  else (expression_parsed_parser, Some return_statement)
 
 
-and parse_expression_statement (parser : t) : t * ExpressionStatement.t =
+and parse_expression_statement (parser : t) : t * ExpressionStatement.t option =
   let current_token = parser.current_token in
-  let expression_parsed_parser, expression = parse_expression parser Lowest in
+  let expression_parsed_parser, expression_opt = parse_expression parser Lowest in
   if peek_token_is expression_parsed_parser (Delimiter Delimiter.Semicolon) then
-    (next_token expression_parsed_parser, {token= current_token; expression= Some expression})
-  else
-    (* Make semicolons in an expression statement optional, for ease of input in the REPL. *)
-    (expression_parsed_parser, {token= current_token; expression= Some expression})
+    (next_token expression_parsed_parser, Some {token= current_token; expression= expression_opt})
+  else (* Make semicolons in an expression statement optional, for ease of input in the REPL. *)
+    (expression_parsed_parser, Some {token= current_token; expression= expression_opt})
 
 
-and parse_statement (parser : t) : t * Statement.t =
+and parse_statement (parser : t) : t * Statement.t option =
   match parser.current_token.type_ with
-  | Keyword Keyword.Let ->
-      let let_statement_parsed_parser, let_statement = parse_let_statement parser in
-      (let_statement_parsed_parser, Let let_statement)
-  | Keyword Keyword.Return ->
-      let return_statement_parsed_parser, return_statement = parse_return_statement parser in
-      (return_statement_parsed_parser, Return return_statement)
-  | _ ->
-      let expression_statement_parsed_parser, expression_statement =
+  | Keyword Keyword.Let -> (
+      let let_statement_parsed_parser, let_statement_opt = parse_let_statement parser in
+      match let_statement_opt with
+      | Some let_statement ->
+          (let_statement_parsed_parser, Some (Let let_statement))
+      | None ->
+          (let_statement_parsed_parser, None) )
+  | Keyword Keyword.Return -> (
+      let return_statement_parsed_parser, return_statement_opt = parse_return_statement parser in
+      match return_statement_opt with
+      | Some return_statement ->
+          (return_statement_parsed_parser, Some (Return return_statement))
+      | None ->
+          (return_statement_parsed_parser, None) )
+  | _ -> (
+      let expression_statement_parsed_parser, expression_statement_opt =
         parse_expression_statement parser
       in
-      (expression_statement_parsed_parser, Expression expression_statement)
+      match expression_statement_opt with
+      | Some expression_statement ->
+          (expression_statement_parsed_parser, Some (Expression expression_statement))
+      | None ->
+          (expression_statement_parsed_parser, None) )
 
 
-and parse_block_statement (parser : t) : t * BlockStatement.t =
+and parse_block_statement (parser : t) : t * BlockStatement.t option =
   let lbrace_token = parser.current_token in
   let rec inner (current_statements : Statement.t list) (current_parser : t) =
     (* Normally the loop should halt on hitting an RBrace, but the LBrace may not be properly closed. *)
@@ -355,13 +383,16 @@ and parse_block_statement (parser : t) : t * BlockStatement.t =
       || current_token_is current_parser (Meta EOF)
     then (current_parser, List.rev current_statements)
     else
-      (* TODO: The Go code says parse_statement can return nil. Maybe we should turn this function to return an option. *)
-      let statement_parsed_parser, statement = parse_statement current_parser in
+      let statement_parsed_parser, statement_opt = parse_statement current_parser in
       (* QUESTION: Why do we have to advance the parser when looping? *)
-      inner (statement :: current_statements) (next_token statement_parsed_parser)
+      match statement_opt with
+      | Some statement ->
+          inner (statement :: current_statements) (next_token statement_parsed_parser)
+      | None ->
+          inner current_statements (next_token statement_parsed_parser)
   in
   let statements_parsed_parser, parsed_statements = inner [] parser in
-  (statements_parsed_parser, {token= lbrace_token; statements= parsed_statements})
+  (statements_parsed_parser, Some {token= lbrace_token; statements= parsed_statements})
 
 
 let parse_program (parser : t) : Program.t =
@@ -369,9 +400,13 @@ let parse_program (parser : t) : Program.t =
     if TokenType.equal current_parser.current_token.type_ (Meta TokenType.Meta.EOF) then
       current_statements
     else
-      let statement_parsed_parser, parsed_statement = parse_statement current_parser in
-      parse_program_inner
-        (next_token statement_parsed_parser)
-        (parsed_statement :: current_statements)
+      let statement_parsed_parser, parsed_statement_opt = parse_statement current_parser in
+      match parsed_statement_opt with
+      | Some parsed_statement ->
+          parse_program_inner
+            (next_token statement_parsed_parser)
+            (parsed_statement :: current_statements)
+      | None ->
+          parse_program_inner (next_token statement_parsed_parser) current_statements
   in
   parse_program_inner parser []
